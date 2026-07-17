@@ -76,3 +76,165 @@ body {
     @apply font-sans;
   }
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   FantomWorks "Shop Work Order" — Call Log redesign tokens.
+   Scoped under .fw so they don't collide with shadcn's global :root tokens
+   (--accent / --muted / --radius-* etc). Everything inside the Call Log
+   console lives under .fw and consumes these. The .fw.night variant is the
+   optional "night shift" dark theme.
+   ───────────────────────────────────────────────────────────────────────── */
+.fw {
+  /* Fonts (mapped to the next/font variables set on <html>) */
+  --font-display: var(--font-oswald), "Arial Narrow", sans-serif;
+  --font-body: var(--font-inter), system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-jbmono), ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  /* Base neutrals (warm paper office) */
+  --paper: #f4f1eb;
+  --paper-sunk: #ede9e1;
+  --surface: #ffffff;
+  --surface-2: #fbfaf7;
+  --hairline: #e5dfd5;
+  --hairline-strong: #d6cfc2;
+
+  --ink: #211e1b;
+  --ink-2: #3d3833;
+  --muted: #6b655d;
+  --faint: #9a9288;
+
+  /* Brand accent — hot-rod red */
+  --accent: #c1352b;
+  --accent-hover: #9e2a22;
+  --accent-press: #86211a;
+  --accent-tint: #fbedeb;
+  --accent-ink: #ffffff;
+
+  /* Structural steel — graphite blue */
+  --steel: #3f4a55;
+  --steel-2: #4b5763;
+  --steel-ink: #e8ebee;
+
+  /* Lead-age heat scale (row spine + dot) */
+  --age-fresh: #0e9f6e;
+  --age-aging: #d9a404;
+  --age-stale: #ea580c;
+  --age-cold: #dc2626;
+
+  /* Pipeline status scale (chips + tabs) — separate hue family */
+  --status-new: #3f4a55;
+  --status-pending: #b45309;
+  --status-active: #15803d;
+  --status-possible: #7c3aed;
+  --status-finished: #64748b;
+  --status-archived: #8b8378;
+
+  /* Semantic aliases (consumed by components) */
+  --bg-app: var(--paper);
+  --bg-sunk: var(--paper-sunk);
+  --surface-card: var(--surface);
+  --surface-raised: var(--surface-2);
+  --border-hairline: var(--hairline);
+  --border-strong: var(--hairline-strong);
+  --text-body: var(--ink);
+  --text-heading: var(--ink);
+  --text-muted: var(--muted);
+  --text-faint: var(--faint);
+  --text-on-accent: var(--accent-ink);
+  --focus-ring: color-mix(in oklch, var(--accent) 45%, transparent);
+
+  /* Radii — machined, moderately tight */
+  --radius-xs: 3px;
+  --radius-sm: 5px;
+  --radius-md: 7px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+  --radius-full: 999px;
+
+  /* Border widths */
+  --bw-spine: 4px;
+
+  /* Shadows — warm-tinted, tactile */
+  --shadow-xs: 0 1px 0 rgba(33, 30, 27, 0.04);
+  --shadow-sm: 0 1px 2px rgba(33, 30, 27, 0.06), 0 1px 1px rgba(33, 30, 27, 0.04);
+  --shadow-md: 0 2px 6px rgba(33, 30, 27, 0.08), 0 1px 2px rgba(33, 30, 27, 0.05);
+  --shadow-lg: 0 8px 24px rgba(33, 30, 27, 0.12), 0 2px 6px rgba(33, 30, 27, 0.06);
+  --shadow-inset: inset 0 1px 2px rgba(33, 30, 27, 0.06);
+
+  /* Blueprint / paper texture */
+  --grid-line: rgba(63, 74, 85, 0.05);
+  --grid-size: 24px;
+
+  /* Signage label treatment */
+  --label-size: 10px;
+  --label-tracking: 0.14em;
+  --label-weight: 600;
+
+  font-family: var(--font-body);
+  color: var(--text-body);
+  background-color: var(--bg-app);
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: var(--grid-size) var(--grid-size);
+}
+
+/* Night shift (optional dark theme) */
+.fw.night {
+  --paper: #17191c;
+  --paper-sunk: #131518;
+  --surface: #212428;
+  --surface-2: #262a2f;
+  --hairline: #313640;
+  --hairline-strong: #3c424d;
+
+  --ink: #eceae6;
+  --ink-2: #d6d3cd;
+  --muted: #9a948b;
+  --faint: #6e6a63;
+
+  --accent: #e23b30;
+  --accent-hover: #f04a3e;
+  --accent-press: #c1352b;
+  --accent-tint: #2a1c1a;
+
+  --steel: #2a2f36;
+  --steel-2: #333941;
+  --steel-ink: #e8ebee;
+
+  --grid-line: rgba(160, 170, 185, 0.04);
+}
+
+/* Signage section label — condensed uppercase garage build-sheet header */
+.fw .fw-label {
+  font-family: var(--font-display);
+  font-size: var(--label-size);
+  font-weight: var(--label-weight);
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+/* Add-note textarea in the FW console */
+.fw textarea.fw-ta {
+  width: 100%;
+  min-height: 96px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 9px 11px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--ink);
+  resize: vertical;
+  outline: none;
+  background: var(--surface-card);
+}
+.fw textarea.fw-ta:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.fw .app-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
