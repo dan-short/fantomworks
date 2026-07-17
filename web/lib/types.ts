@@ -40,6 +40,7 @@ export interface Submission {
   status: SubmissionStatus
   received_date: string | null // ISO date; null when legacy sentinel
   original_date: string | null
+  bumped_at: string | null // set by "bump to top"; orders above received_date
   added_by: string | null
   notes: string | null
 

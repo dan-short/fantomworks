@@ -1,6 +1,6 @@
-import { X } from 'lucide-react'
-import { getSubmissions, getDetailStages, type SortKey } from '@/lib/data'
-import { isStatus, STATUS_VIEWS, type SubmissionStatus, type DetailsMap } from '@/lib/types'
+import { X, ChevronLeft, ChevronRight } from 'lucide-react'
+import { getSubmissions, getDetailStagesFor, PAGE_SIZE, type SortKey } from '@/lib/data'
+import { isStatus, STATUS_VIEWS, type SubmissionStatus } from '@/lib/types'
 import { CallLogTable } from '@/components/CallLogTable'
 
 const SORTS: { key: SortKey; label: string }[] = [
@@ -13,23 +13,37 @@ const SORTS: { key: SortKey; label: string }[] = [
 export default async function CallsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string; sort?: string; q?: string }>
+  searchParams: Promise<{ view?: string; sort?: string; q?: string; p?: string }>
 }) {
   const sp = await searchParams
   const view: SubmissionStatus = sp.view && isStatus(sp.view) ? sp.view : 'new'
   const sort = (sp.sort as SortKey) ?? 'received'
   const search = sp.q ?? ''
+  const page = Math.max(1, Number(sp.p) || 1)
 
-  const submissions = await getSubmissions(view, { sort, search })
-
-  // fetch detail stages for the visible page
-  const stageLists = await Promise.all(submissions.map((s) => getDetailStages(s.id)))
-  const details: DetailsMap = {}
-  submissions.forEach((s, i) => {
-    if (stageLists[i].length) details[s.id] = stageLists[i]
-  })
+  const { rows, total } = await getSubmissions(view, { sort, search, page })
+  const details = await getDetailStagesFor(rows.map((s) => s.id))
 
   const label = STATUS_VIEWS.find((v) => v.key === view)?.label ?? view
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const first = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1
+  const last = (page - 1) * PAGE_SIZE + rows.length
+
+  // Build a /calls URL, carrying the current view/sort/search and overriding page.
+  const href = (p: number) => {
+    const params = new URLSearchParams({ view })
+    if (sort !== 'received') params.set('sort', sort)
+    if (search) params.set('q', search)
+    if (p > 1) params.set('p', String(p))
+    return `/calls?${params.toString()}`
+  }
+
+  // Clear-search: same view/sort, no query, back to page 1.
+  const clearHref = () => {
+    const params = new URLSearchParams({ view })
+    if (sort !== 'received') params.set('sort', sort)
+    return `/calls?${params.toString()}`
+  }
 
   return (
     <div className="flex min-h-0 flex-1 flex-col p-4">
@@ -37,7 +51,8 @@ export default async function CallsPage({
         <div>
           <h1 className="text-lg font-semibold text-stone-900">{label}</h1>
           <p className="tnum text-sm text-stone-500">
-            {submissions.length} {submissions.length === 1 ? 'submission' : 'submissions'}
+            {total} {total === 1 ? 'submission' : 'submissions'}
+            {pageCount > 1 && <span className="text-stone-400"> · showing {first}–{last}</span>}
           </p>
         </div>
 
@@ -53,7 +68,7 @@ export default async function CallsPage({
               />
               {search && (
                 <a
-                  href={`/calls?view=${view}${sort !== 'received' ? `&sort=${sort}` : ''}`}
+                  href={clearHref()}
                   aria-label="Clear search"
                   title="Clear search"
                   className="absolute top-1/2 right-2 -translate-y-1/2 rounded p-0.5 text-stone-400 hover:bg-stone-100 hover:text-stone-700"
@@ -92,8 +107,42 @@ export default async function CallsPage({
       </div>
 
       <div className="min-h-0 flex-1">
-        <CallLogTable submissions={submissions} details={details} />
+        <CallLogTable submissions={rows} details={details} />
       </div>
+
+      {pageCount > 1 && (
+        <nav className="mt-3 flex shrink-0 items-center justify-between text-sm text-stone-600">
+          <span className="tnum text-xs text-stone-400">
+            Page {page} of {pageCount}
+          </span>
+          <div className="flex items-center gap-1">
+            {page > 1 ? (
+              <a
+                href={href(page - 1)}
+                className="flex items-center gap-1 rounded-md border border-stone-300 bg-white px-2.5 py-1.5 hover:bg-stone-100"
+              >
+                <ChevronLeft className="h-4 w-4" /> Prev
+              </a>
+            ) : (
+              <span className="flex cursor-not-allowed items-center gap-1 rounded-md border border-stone-200 px-2.5 py-1.5 text-stone-300">
+                <ChevronLeft className="h-4 w-4" /> Prev
+              </span>
+            )}
+            {page < pageCount ? (
+              <a
+                href={href(page + 1)}
+                className="flex items-center gap-1 rounded-md border border-stone-300 bg-white px-2.5 py-1.5 hover:bg-stone-100"
+              >
+                Next <ChevronRight className="h-4 w-4" />
+              </a>
+            ) : (
+              <span className="flex cursor-not-allowed items-center gap-1 rounded-md border border-stone-200 px-2.5 py-1.5 text-stone-300">
+                Next <ChevronRight className="h-4 w-4" />
+              </span>
+            )}
+          </div>
+        </nav>
+      )}
     </div>
   )
 }

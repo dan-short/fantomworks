@@ -12,7 +12,7 @@ function base(over: Partial<Submission>): Submission {
     city: null, state_country: null, time_zone: null, distance_miles: null,
     year: null, make: null, model: null, budget: null, project_start: null,
     project_description: null, restoration_decision_matrix: null,
-    status: 'new', received_date: daysAgo(5), original_date: null,
+    status: 'new', received_date: daysAgo(5), original_date: null, bumped_at: null,
     added_by: 'Online Form', notes: null,
     call_attempt_one: null, call_attempt_two: null, call_attempt_three: null,
     email_attempt: null, images: [],

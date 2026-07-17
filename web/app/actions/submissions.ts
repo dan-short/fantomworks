@@ -42,8 +42,8 @@ export async function addNote(id: number, note: string) {
   }
 }
 
-// Bump-to-top: in the real DB this is a Postgres function (atomic reorder).
-// For the scaffold we approximate by resetting received_date to today.
+// Bump-to-top: stamp bumped_at so the row sorts above the rest of the view
+// without touching received_date (which drives the real age coloring).
 export async function bump(id: number) {
-  await apply(id, { received_date: new Date().toISOString().slice(0, 10) })
+  await apply(id, { bumped_at: new Date().toISOString() })
 }

@@ -50,6 +50,21 @@ function fromRow(row: Record<string, unknown>): Submission {
 
 export type SortKey = 'received' | 'name' | 'vehicle' | 'distance'
 
+export const PAGE_SIZE = 50
+
+const SEARCH_COLS = ['first_name', 'last_name', 'email', 'make', 'model', 'city'] as const
+
+// Build a safe PostgREST `.or()` value for an ILIKE contains-search.
+//  1. Neutralize LIKE metacharacters (\ % _) so the term matches literally.
+//  2. Quote + escape for PostgREST's or() grammar, so commas / parentheses in
+//     the search string can't break out of the filter or inject extra clauses.
+function orIlikeFilter(term: string): string {
+  const likeSafe = term.replace(/[\\%_]/g, (m) => `\\${m}`)
+  const quoted = `%${likeSafe}%`.replace(/["\\]/g, (m) => `\\${m}`)
+  return SEARCH_COLS.map((c) => `${c}.ilike."${quoted}"`).join(',')
+}
+
+// Dev-store equivalent of the DB ordering (see the `.order()` chain below).
 function sortSubs(rows: Submission[], sort: SortKey): Submission[] {
   const r = [...rows]
   switch (sort) {
@@ -60,35 +75,57 @@ function sortSubs(rows: Submission[], sort: SortKey): Submission[] {
     case 'distance':
       return r.sort((a, b) => (b.distance_miles ?? 0) - (a.distance_miles ?? 0))
     default:
-      return r.sort((a, b) => (b.received_date ?? '').localeCompare(a.received_date ?? ''))
+      // bumped rows first (most recent bump on top), then by real received_date
+      return r.sort(
+        (a, b) =>
+          (b.bumped_at ?? '').localeCompare(a.bumped_at ?? '') ||
+          (b.received_date ?? '').localeCompare(a.received_date ?? ''),
+      )
   }
+}
+
+// Push the sort into the query so pagination returns the right page (sorting
+// only the current page in JS would be wrong).
+function applySort<T extends { order: (col: string, o?: { ascending?: boolean; nullsFirst?: boolean }) => T }>(
+  q: T,
+  sort: SortKey,
+): T {
+  switch (sort) {
+    case 'name':
+      return q.order('last_name', { ascending: true })
+    case 'vehicle':
+      return q.order('year', { ascending: true })
+    case 'distance':
+      return q.order('distance_miles', { ascending: false, nullsFirst: false })
+    default:
+      return q
+        .order('bumped_at', { ascending: false, nullsFirst: false })
+        .order('received_date', { ascending: false, nullsFirst: false })
+  }
+}
+
+export interface SubmissionsPage {
+  rows: Submission[]
+  total: number
 }
 
 export async function getSubmissions(
   status: SubmissionStatus,
-  opts: { sort?: SortKey; search?: string } = {},
-): Promise<Submission[]> {
+  opts: { sort?: SortKey; search?: string; page?: number } = {},
+): Promise<SubmissionsPage> {
   const sort = opts.sort ?? 'received'
   const search = opts.search?.trim().toLowerCase()
+  const page = Math.max(1, opts.page ?? 1)
+  const from = (page - 1) * PAGE_SIZE
 
   if (isSupabaseConfigured) {
     const supabase = await createClient()
-    let q = supabase.from('submissions').select('*').eq('status', status)
-    if (search) {
-      q = q.or(
-        [
-          `first_name.ilike.%${search}%`,
-          `last_name.ilike.%${search}%`,
-          `email.ilike.%${search}%`,
-          `make.ilike.%${search}%`,
-          `model.ilike.%${search}%`,
-          `city.ilike.%${search}%`,
-        ].join(','),
-      )
-    }
-    const { data, error } = await q
+    let q = supabase.from('submissions').select('*', { count: 'exact' }).eq('status', status)
+    if (search) q = q.or(orIlikeFilter(search))
+    q = applySort(q, sort).range(from, from + PAGE_SIZE - 1)
+    const { data, error, count } = await q
     if (error) throw error
-    return sortSubs((data ?? []).map(fromRow), sort)
+    return { rows: (data ?? []).map(fromRow), total: count ?? 0 }
   }
 
   let rows = devSubs().filter((s) => s.status === status)
@@ -99,7 +136,8 @@ export async function getSubmissions(
         .some((v) => v!.toLowerCase().includes(search)),
     )
   }
-  return sortSubs(rows, sort)
+  rows = sortSubs(rows, sort)
+  return { rows: rows.slice(from, from + PAGE_SIZE), total: rows.length }
 }
 
 export async function countByStatus(): Promise<Record<string, number>> {
@@ -129,6 +167,18 @@ export async function getSubmission(id: number): Promise<Submission | null> {
   return devSubs().find((s) => s.id === id) ?? null
 }
 
+// DB columns are stage_key / stage_label; the app type uses key / label.
+function toDetailStage(row: Record<string, unknown>): DetailStage {
+  return {
+    key: (row.stage_key ?? row.key) as string,
+    label: (row.stage_label ?? row.label) as string,
+    description: (row.description ?? null) as string | null,
+    parts_cost: (row.parts_cost ?? null) as number | null,
+    hours: (row.hours ?? null) as number | null,
+    sort_order: (row.sort_order ?? 0) as number,
+  }
+}
+
 export async function getDetailStages(id: number): Promise<DetailStage[]> {
   if (isSupabaseConfigured) {
     const supabase = await createClient()
@@ -138,9 +188,34 @@ export async function getDetailStages(id: number): Promise<DetailStage[]> {
       .eq('submission_id', id)
       .order('sort_order')
     if (error) return []
-    return (data ?? []) as DetailStage[]
+    return (data ?? []).map(toDetailStage)
   }
   return devDetails()[id] ?? []
+}
+
+// Batched fetch for a page of submissions — one round-trip instead of one per
+// row (the old N+1). Returns a map keyed by submission id.
+export async function getDetailStagesFor(ids: number[]): Promise<DetailsMap> {
+  if (ids.length === 0) return {}
+  if (isSupabaseConfigured) {
+    const supabase = await createClient()
+    const { data, error } = await supabase
+      .from('submission_detail_stages')
+      .select('*')
+      .in('submission_id', ids)
+      .order('sort_order')
+    if (error) return {}
+    const map: DetailsMap = {}
+    for (const row of data ?? []) {
+      const sid = (row as { submission_id: number }).submission_id
+      ;(map[sid] ??= []).push(toDetailStage(row))
+    }
+    return map
+  }
+  const all = devDetails()
+  const map: DetailsMap = {}
+  for (const id of ids) if (all[id]?.length) map[id] = all[id]
+  return map
 }
 
 // dev-mode mutators (used by server actions when Supabase isn't configured)
