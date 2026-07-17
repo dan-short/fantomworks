@@ -238,3 +238,49 @@ body {
   scrollbar-width: thin;
   scrollbar-color: var(--border-strong) transparent;
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Submission-form fields — porcelain inputs used by the Office (/calls/new)
+   and Self (/submit) submission forms. Base sizing matches the self-form
+   spec (14px / 10px 12px); `.fw-compact` tightens to the office spec
+   (13px / 9px 11px). Error state is set inline by the form components via
+   borderColor:var(--age-cold).
+   ───────────────────────────────────────────────────────────────────────── */
+.fw .fw-field {
+  width: 100%;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--ink);
+  background: var(--surface-card);
+  outline: none;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+.fw .fw-field:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+.fw .fw-field::placeholder {
+  color: var(--faint);
+}
+.fw textarea.fw-field {
+  resize: vertical;
+  min-height: 150px;
+  line-height: 1.55;
+}
+.fw select.fw-field {
+  appearance: auto;
+  cursor: pointer;
+}
+
+/* Office form runs a touch denser than the public wizard. */
+.fw-compact .fw-field {
+  padding: 9px 11px;
+  font-size: 13px;
+}
+.fw-compact textarea.fw-field {
+  min-height: 96px;
+  line-height: 1.5;
+}

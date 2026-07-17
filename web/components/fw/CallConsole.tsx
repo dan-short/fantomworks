@@ -13,6 +13,7 @@ import * as React from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Search,
+  Plus,
   Moon,
   Sun,
   ChevronLeft,
@@ -418,6 +419,39 @@ export function CallConsole({
                 {email}
               </span>
             )}
+            <button
+              onClick={() => router.push('/calls/new')}
+              title="Log a phoned-in or walk-in lead"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                border: '1px solid var(--accent)',
+                background: 'var(--accent)',
+                color: '#fff',
+                cursor: 'pointer',
+                height: 32,
+                padding: '0 14px',
+                borderRadius: 'var(--radius-sm)',
+                boxShadow: 'var(--shadow-sm)',
+                fontFamily: 'var(--font-display)',
+                fontSize: 12.5,
+                fontWeight: 600,
+                letterSpacing: '.06em',
+                textTransform: 'uppercase',
+                whiteSpace: 'nowrap',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'var(--accent-hover)'
+                e.currentTarget.style.borderColor = 'var(--accent-hover)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'var(--accent)'
+                e.currentTarget.style.borderColor = 'var(--accent)'
+              }}
+            >
+              <Plus size={15} /> New lead
+            </button>
             <button
               onClick={() => setNight((n) => !n)}
               title="Night shift"
