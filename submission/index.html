@@ -1,0 +1,727 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0"
+      charset="UTF-8"
+    />
+    <title>FantomWorks Project Submission Form</title>
+    <style type="text/css">
+      body {
+        font-family: 'Open Sans', Arial, sans-serif;
+        font-size: 18px;
+        color: #878787;
+        background-color: #eaeaea;
+        font-weight: 300;
+        line-height: 1.8;
+      }
+      .form-style-10 {
+        width: 90%;
+        padding: 30px;
+        margin: 40px auto;
+        background: #fff;
+        border-radius: 10px;
+        -webkit-border-radius: 10px;
+        -moz-border-radius: 10px;
+        box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.13);
+        -moz-box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.13);
+        -webkit-box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.13);
+      }
+      .form-style-10 .inner-wrap {
+        padding: 30px;
+        background: #f8f8f8;
+        max-width: 95%;
+        border-radius: 6px;
+        margin-left: 6px;
+        margin-bottom: 15px;
+      }
+      .form-style-10 h1 {
+        background: #2a88ad;
+        padding: 20px 30px 15px 30px;
+        margin: -30px -30px 30px -30px;
+        border-radius: 10px 10px 0 0;
+        -webkit-border-radius: 10px 10px 0 0;
+        -moz-border-radius: 10px 10px 0 0;
+        color: #fff;
+        text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.12);
+        font:
+          normal 40px 'Bitter',
+          serif;
+        -moz-box-shadow: inset 0px 2px 2px 0px rgba(255, 255, 255, 0.17);
+        -webkit-box-shadow: inset 0px 2px 2px 0px rgba(255, 255, 255, 0.17);
+        box-shadow: inset 0px 2px 2px 0px rgba(255, 255, 255, 0.17);
+        border: 1px solid #257c9e;
+      }
+      .form-style-10 h1 > span {
+        display: block;
+        margin-top: 2px;
+        font:
+          24px Arial,
+          Helvetica,
+          sans-serif;
+      }
+      .form-style-10 h2 {
+        color: #2a88ad;
+        font-weight: bold;
+        font: normal 32px;
+      }
+      .form-style-10 txt-color {
+        color: #2a88ad;
+        font-weight: bold;
+      }
+      .form-style-10 label {
+        display: block;
+        font:
+          13px Arial,
+          Helvetica,
+          sans-serif;
+        color: #888;
+        margin-bottom: 25px;
+      }
+      .form-style-10 input[type='text'],
+      .form-style-10 input[type='date'],
+      .form-style-10 input[type='datetime'],
+      .form-style-10 input[type='email'],
+      .form-style-10 input[type='number'],
+      .form-style-10 input[type='search'],
+      .form-style-10 input[type='time'],
+      .form-style-10 input[type='url'],
+      .form-style-10 input[type='password'],
+      .form-style-10 textarea,
+      .form-style-10 select {
+        font-size: 18px;
+        display: block;
+        box-sizing: border-box;
+        -webkit-box-sizing: border-box;
+        -moz-box-sizing: border-box;
+        width: 100%;
+        padding: 16px;
+        border-radius: 6px;
+        -webkit-border-radius: 6px;
+        -moz-border-radius: 6px;
+        border: 2px solid #fff;
+        box-shadow: inset 0px 1px 1px rgba(0, 0, 0, 0.33);
+        -moz-box-shadow: inset 0px 1px 1px rgba(0, 0, 0, 0.33);
+        -webkit-box-shadow: inset 0px 1px 1px rgba(0, 0, 0, 0.33);
+      }
+      .form-style-10 .section {
+        font:
+          normal 36px 'Bitter',
+          serif;
+        color: #2a88ad;
+        margin-top: 36px;
+        margin-bottom: 2px;
+      }
+      .form-style-10 .section span {
+        background: #2a88ad;
+        padding: 5px 10px 5px 10px;
+        position: absolute;
+        border-radius: 50%;
+        -webkit-border-radius: 50%;
+        -moz-border-radius: 50%;
+        border: 4px solid #fff;
+        font-size: 14px;
+        margin-left: -45px;
+        color: #fff;
+        margin-top: -3px;
+      }
+      .form-style-10 input[type='button'],
+      .form-style-10 input[type='submit'] {
+        margin: auto 0;
+        background: #2a88ad;
+        padding: 8px 20px 8px 20px;
+        border-radius: 5px;
+        -webkit-border-radius: 5px;
+        -moz-border-radius: 5px;
+        color: #fff;
+        text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.12);
+        font:
+          normal 30px 'Bitter',
+          serif;
+        -moz-box-shadow: inset 0px 2px 2px 0px rgba(255, 255, 255, 0.17);
+        -webkit-box-shadow: inset 0px 2px 2px 0px rgba(255, 255, 255, 0.17);
+        box-shadow: inset 0px 2px 2px 0px rgba(255, 255, 255, 0.17);
+        border: 1px solid #257c9e;
+        font-size: 25px;
+      }
+      .form-style-10 input[type='button']:hover,
+      .form-style-10 input[type='submit']:hover {
+        background: #2a6881;
+        -moz-box-shadow: inset 0px 2px 2px 0px rgba(255, 255, 255, 0.28);
+        -webkit-box-shadow: inset 0px 2px 2px 0px rgba(255, 255, 255, 0.28);
+        box-shadow: inset 0px 2px 2px 0px rgba(255, 255, 255, 0.28);
+      }
+      .form-style-10 .privacy-policy {
+        float: right;
+        width: 250px;
+        font:
+          12px Arial,
+          Helvetica,
+          sans-serif;
+        color: #4d4d4d;
+        margin-top: 10px;
+        text-align: right;
+      }
+      .table,
+      td {
+        border: 1px solid black;
+      }
+      .button {
+        align-items: flex-start;
+        text-align: center;
+        cursor: default;
+        box-sizing: border-box;
+        padding: 2px 6px 3px;
+        border-width: 2px;
+        border-style: outset;
+        border-image: initial;
+        -webkit-appearance: push-button;
+        -webkit-user-select: none;
+        white-space: pre;
+        text-rendering: auto;
+        letter-spacing: normal;
+        word-spacing: normal;
+        text-transform: none;
+        text-indent: 0px;
+        text-shadow: none;
+        display: inline-block;
+        text-align: start;
+        margin: 0em 0em 0em 0em;
+        font: 13.3333px Arial;
+      }
+      .button-container {
+        display: flex;
+        justify-content: space-between;
+        width: 100%;
+        margin-top: 20px;
+      }
+      .cancel-button {
+        background: #dc3545 !important;
+        border: 1px solid #c82333 !important;
+        order: 1;
+      }
+      .cancel-button:hover {
+        background: #c82333 !important;
+      }
+      .submit-button {
+        background: #2a88ad !important;
+        border: 1px solid #257c9e !important;
+        order: 2;
+      }
+    </style>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+    <script>
+      $('[placeholder]')
+        .focus(function () {
+          var input = $(this);
+          if (input.val() == input.attr('placeholder')) {
+            input.val('');
+            input.removeClass('placeholder');
+          }
+        })
+        .blur(function () {
+          var input = $(this);
+          if (input.val() == '' || input.val() == input.attr('placeholder')) {
+            input.addClass('placeholder');
+            input.val(input.attr('placeholder'));
+          }
+        })
+        .blur()
+        .parents('form')
+        .submit(function () {
+          $(this)
+            .find('[placeholder]')
+            .each(function () {
+              var input = $(this);
+              if (input.val() == input.attr('placeholder')) {
+                input.val('');
+              }
+            });
+        });
+    </script>
+    <script type="text/javascript">
+      function FormatCurrency(value) {
+        var value1 = value.replace(/,/g, '');
+        if (value1.indexOf('$') >= 0)
+          if (value1.indexOf('.00') >= 0) value1 = value1;
+          else value1 = value1 + '.00';
+        else if (value1.indexOf('.00') >= 0) value1 = '$' + value1;
+        else value1 = '$' + value1 + '.00';
+        budget.value = value1.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      }
+    </script>
+    <script type="text/javascript">
+      function isNumberKey(evt){ var charCode = (evt.which) ? evt.which : event.keyCode if (charCode > 31 && (charCode < 48 || charCode > 57)) return false; return true; }
+    </script>
+    <script type="text/javascript">
+      function StartDate(val){ var startDate = (val) if (startDate == " NATT ") alert("Thank you for desiring us to work on your vehicle, but we suggest you STOP here and return when you are ready to start your project. The rest of this project submission form is extensive and can take some time completing."); return true; }
+    </script>
+  </head>
+  <body onload="document.forms['form'].reset()">
+    <div class="form-style-10">
+      <center>
+        <h1>
+          FantomWorks Project Submission<span
+            ><i>"Because You've Waited Long Enough..."</i></span
+          >
+        </h1>
+      </center>
+      We hate bureaucracy as much as you do and certainly understand that you
+      are probably asking yourself why we want you to fill out this form. Our
+      hope is that, by asking you to fill out the information below, through
+      that process you'll find out whether or not it makes sense to do your
+      project.<br /><br />
+      We typically work on vehicles 1973 and older for good reasons. When the
+      Arab Oil Embargo hit the USA in 1973 there were massive changes made to
+      the way vehicles were manufactured that would forever greatly negatively
+      affect rebuilding those vehicles. The addition of strict emission laws
+      that happened at the same time resulted in a significant change in the way
+      vehicles would be forever built. As a result of those changes, the
+      rebuilding or restoration of those cars becomes more costly while
+      ironically making them worth less money. The unfortunate situation that
+      resulted is that in the past we've tried to help people with their cars
+      from later years and it almost never worked out. Parts weren't available
+      new or rebuilt and the used parts were typically in horrible shape and
+      non-returnable.<br /><br />
+      Up until today, I have personally reviewed, read, emailed, or called every
+      single applicant back. Unfortunately most of the applicants are asking for
+      unreasonable things. Our shop is not a “cut rate” backyard bubba mechanic
+      shop that uses junk yard parts and yet most of the applicants ask for that
+      exact approach to building “their car” as they feel they are somehow
+      different and should get the 10 cents on the dollar build. I provide an
+      historical average of labor hours based on main stream restorations and
+      our hourly rates. Please take a moment and determine whether your request
+      is reasonable. <br /><br />
+      You need to provide a schedule that you can and will answer your phone.
+      Over NINETY PERCENT of our attempts to contact customers are met by call
+      screening voicemails. We will only call 2 to 3 times and if we don't get
+      through we'll consider the project dead and move on. Provide what days and
+      what times you WILL answer a call from a 757 area code. Again please do
+      your best to answer the phone during the times you say you will and if you
+      miss a call from a 757 area code, please call back. <br /><br />
+      If you find at the end of the form you are not sure your project is a good
+      idea, you will know why we asked you to do this. If you find at the end
+      you’ve filled out the information and we have a good basis to understand
+      the project, then you will have saved both of us a lot of time when it
+      comes to discussing your project.<br />
+      ***<b
+        >Please try to fill out this form as completely as possible, including
+        the uploading of photos of your vehicles current state, as these are an
+        invaluable tool for Dan understanding the description of your vehicle.
+        Please be aware that there is a 30 minute time-limit to completing this
+        form completely.</b
+      >
+      <br /><br />
+      If you are having problems using this form, please contact
+      webmaster@fantomworks.com with your name, number and a good time for us to
+      call and assist you in working through this form. Please be aware that
+      there is a 30 minute time limit to completing this form. <b>DO NOT</b> hit
+      the back button as this will cause you to start all over. Sorry but we did
+      our best and we weren&#039;t able to figure out how to save you from the
+      back button tragedy.<br />
+      <form action="calllogprocessor2.php" name="form" method="post">
+        <br /><br /><label>Select a Project Start Time</label>
+        <select
+          name="projectStart"
+          id="projectStart"
+          required="required"
+          onchange="StartDate(this.value)"
+        >
+          <option value=" ASAP ">Next Shop Available</option>
+          <option value=" NATT ">Not at this time</option>
+        </select>
+        <div class="section"><span>1</span>Customer Info &amp; Address</div>
+        <div class="inner-wrap">
+          <label
+            ><input
+              type="text"
+              name="firstName"
+              id="firstName"
+              placeholder="First Name"
+              required="required"
+          /></label>
+          <label
+            ><input
+              type="text"
+              name="lastName"
+              id="lastName"
+              placeholder="Last Name"
+              required="required"
+          /></label>
+          <label
+            ><input
+              type="text"
+              name="phoneNumber"
+              id="phoneNumber"
+              placeholder="Phone Number"
+              onkeypress="return isNumberKey(event)"
+              required="required"
+          /></label>
+          <label
+            ><input
+              type="text"
+              name="altPhone"
+              id="altPhone"
+              placeholder="Alternate Phone Number"
+              onkeypress="return isNumberKey(event)"
+          /></label>
+          <label
+            ><input
+              type="text"
+              name="callSchedule"
+              id="callSchedule"
+              placeholder="Call Schedule"
+              required="required"
+          /></label>
+          <label
+            ><input
+              type="text"
+              name="email"
+              id="email"
+              placeholder="Email Address"
+              required="required"
+          /></label>
+          <label
+            ><input type="text" name="city" id="city" placeholder="City"
+          /></label>
+          <label
+            ><input
+              type="text"
+              name="stateCountry"
+              id="stateCountry"
+              placeholder="State or Country"
+          /></label>
+          <label
+            ><input
+              type="text"
+              name="zipcode"
+              id="zipcode"
+              placeholder="Zip Code"
+          /></label>
+          <select id="timeZone" name="timeZone">
+            <option value="No Option Chosen">Please Select an Option</option>
+            <option value=" (GMT-12:00) International Date Line West ">
+              (GMT-12:00) International Date Line West
+            </option>
+            <option value=" (GMT-11:00) Midway Island, Samoa ">
+              (GMT-11:00) Midway Island, Samoa
+            </option>
+            <option value=" (GMT-10:00) Hawaii ">(GMT-10:00) Hawaii</option>
+            <option value=" (GMT-09:00) Alaska ">(GMT-09:00) Alaska</option>
+            <option value=" (GMT-08:00) Pacific Time (US & Canada) ">
+              (GMT-08:00) Pacific Time (US & Canada)
+            </option>
+            <option value=" (GMT-08:00) Tijuana, Baja California ">
+              (GMT-08:00) Tijuana, Baja California
+            </option>
+            <option value=" (GMT-07:00) Arizona ">(GMT-07:00) Arizona</option>
+            <option value=" (GMT-07:00) Chihuahua, La Paz, Mazatlan ">
+              (GMT-07:00) Chihuahua, La Paz, Mazatlan
+            </option>
+            <option value=" (GMT-07:00) Mountain Time (US & Canada) ">
+              (GMT-07:00) Mountain Time (US & Canada)
+            </option>
+            <option value=" (GMT-06:00) Central America ">
+              (GMT-06:00) Central America
+            </option>
+            <option value=" (GMT-06:00) Central Time (US & Canada) ">
+              (GMT-06:00) Central Time (US & Canada)
+            </option>
+            <option value=" (GMT-06:00) Guadalajara, Mexico City, Monterrey ">
+              (GMT-06:00) Guadalajara, Mexico City, Monterrey
+            </option>
+            <option value=" (GMT-06:00) Saskatchewan ">
+              (GMT-06:00) Saskatchewan
+            </option>
+            <option value=" (GMT-05:00) Bogota, Lima, Quito, Rio Branco ">
+              (GMT-05:00) Bogota, Lima, Quito, Rio Branco
+            </option>
+            <option value=" (GMT-05:00) Eastern Time (US & Canada) ">
+              (GMT-05:00) Eastern Time (US & Canada)
+            </option>
+            <option value=" (GMT-05:00) Indiana (East) ">
+              (GMT-05:00) Indiana (East)
+            </option>
+            <option value=" (GMT-04:00) Atlantic Time (Canada) ">
+              (GMT-04:00) Atlantic Time (Canada)
+            </option>
+            <option value=" (GMT-04:00) Caracas, La Paz ">
+              (GMT-04:00) Caracas, La Paz
+            </option>
+            <option value=" (GMT-04:00) Manaus ">(GMT-04:00) Manaus</option>
+            <option value=" (GMT-04:00) Santiago ">(GMT-04:00) Santiago</option>
+            <option value=" (GMT-03:30) Newfoundland ">
+              (GMT-03:30) Newfoundland
+            </option>
+            <option value=" (GMT-03:00) Brasilia ">(GMT-03:00) Brasilia</option>
+            <option value=" (GMT-03:00) Buenos Aires, Georgetown ">
+              (GMT-03:00) Buenos Aires, Georgetown
+            </option>
+            <option value=" (GMT-03:00) Greenland ">
+              (GMT-03:00) Greenland
+            </option>
+            <option value=" (GMT-03:00) Montevideo ">
+              (GMT-03:00) Montevideo
+            </option>
+            <option value=" (GMT-02:00) Mid-Atlantic ">
+              (GMT-02:00) Mid-Atlantic
+            </option>
+            <option value=" (GMT-01:00) Cape Verde Is. ">
+              (GMT-01:00) Cape Verde Is.
+            </option>
+            <option value=" (GMT-01:00) Azores ">(GMT-01:00) Azores</option>
+            <option value=" (GMT+00:00) Casablanca, Monrovia, Reykjavik ">
+              (GMT+00:00) Casablanca, Monrovia, Reykjavik
+            </option>
+            <option
+              value=" (GMT+00:00) Greenwich Mean Time : Dublin, Edinburgh, Lisbon, London "
+            >
+              (GMT+00:00) Greenwich Mean Time : Dublin, Edinburgh, Lisbon,
+              London
+            </option>
+            <option
+              value=" (GMT+01:00) Amsterdam, Berlin, Bern, Rome, Stockholm, Vienna "
+            >
+              (GMT+01:00) Amsterdam, Berlin, Bern, Rome, Stockholm, Vienna
+            </option>
+            <option
+              value=" (GMT+01:00) Belgrade, Bratislava, Budapest, Ljubljana, Prague "
+            >
+              (GMT+01:00) Belgrade, Bratislava, Budapest, Ljubljana, Prague
+            </option>
+            <option value=" (GMT+01:00) Brussels, Copenhagen, Madrid, Paris ">
+              (GMT+01:00) Brussels, Copenhagen, Madrid, Paris
+            </option>
+            <option value=" (GMT+01:00) Sarajevo, Skopje, Warsaw, Zagreb ">
+              (GMT+01:00) Sarajevo, Skopje, Warsaw, Zagreb
+            </option>
+            <option value=" (GMT+01:00) West Central Africa ">
+              (GMT+01:00) West Central Africa
+            </option>
+            <option value=" (GMT+02:00) Amman ">(GMT+02:00) Amman</option>
+            <option value=" (GMT+02:00) Athens, Bucharest, Istanbul ">
+              (GMT+02:00) Athens, Bucharest, Istanbul
+            </option>
+            <option value=" (GMT+02:00) Beirut ">(GMT+02:00) Beirut</option>
+            <option value=" (GMT+02:00) Cairo ">(GMT+02:00) Cairo</option>
+            <option value=" (GMT+02:00) Harare, Pretoria ">
+              (GMT+02:00) Harare, Pretoria
+            </option>
+            <option
+              value=" (GMT+02:00) Helsinki, Kyiv, Riga, Sofia, Tallinn, Vilnius "
+            >
+              (GMT+02:00) Helsinki, Kyiv, Riga, Sofia, Tallinn, Vilnius
+            </option>
+            <option value=" (GMT+02:00) Jerusalem ">
+              (GMT+02:00) Jerusalem
+            </option>
+            <option value=" (GMT+02:00) Minsk ">(GMT+02:00) Minsk</option>
+            <option value=" (GMT+02:00) Windhoek ">(GMT+02:00) Windhoek</option>
+            <option value=" (GMT+03:00) Kuwait, Riyadh, Baghdad ">
+              (GMT+03:00) Kuwait, Riyadh, Baghdad
+            </option>
+            <option value=" (GMT+03:00) Moscow, St. Petersburg, Volgograd ">
+              (GMT+03:00) Moscow, St. Petersburg, Volgograd
+            </option>
+            <option value=" (GMT+03:00) Nairobi ">(GMT+03:00) Nairobi</option>
+            <option value=" (GMT+03:00) Tbilisi ">(GMT+03:00) Tbilisi</option>
+            <option value=" (GMT+03:30) Tehran ">(GMT+03:30) Tehran</option>
+            <option value=" (GMT+04:00) Abu Dhabi, Muscat ">
+              (GMT+04:00) Abu Dhabi, Muscat
+            </option>
+            <option value=" (GMT+04:00) Baku ">(GMT+04:00) Baku</option>
+            <option value=" (GMT+04:00) Yerevan ">(GMT+04:00) Yerevan</option>
+            <option value=" (GMT+04:30) Kabul ">(GMT+04:30) Kabul</option>
+            <option value=" (GMT+05:00) Yekaterinburg ">
+              (GMT+05:00) Yekaterinburg
+            </option>
+            <option value=" (GMT+05:00) Islamabad, Karachi, Tashkent ">
+              (GMT+05:00) Islamabad, Karachi, Tashkent
+            </option>
+            <option value=" (GMT+05:30) Sri Jayawardenapura ">
+              (GMT+05:30) Sri Jayawardenapura
+            </option>
+            <option value=" (GMT+05:30) Chennai, Kolkata, Mumbai, New Delhi ">
+              (GMT+05:30) Chennai, Kolkata, Mumbai, New Delhi
+            </option>
+            <option value=" (GMT+05:45) Kathmand">(GMT+05:45) Kathmand</option>
+            <option value=" (GMT+06:00) Almaty, Novosibirsk ">
+              (GMT+06:00) Almaty, Novosibirsk
+            </option>
+            <option value=" (GMT+06:00) Astana, Dhaka ">
+              (GMT+06:00) Astana, Dhaka
+            </option>
+            <option value=" (GMT+06:30) Yangon (Rangoon) ">
+              (GMT+06:30) Yangon (Rangoon)
+            </option>
+            <option value=" (GMT+07:00) Bangkok, Hanoi, Jakarta ">
+              (GMT+07:00) Bangkok, Hanoi, Jakarta
+            </option>
+            <option value=" (GMT+07:00) Krasnoyarsk ">
+              (GMT+07:00) Krasnoyarsk
+            </option>
+            <option value=" (GMT+08:00) Beijing, Chongqing, Hong Kong, Urumqi ">
+              (GMT+08:00) Beijing, Chongqing, Hong Kong, Urumqi
+            </option>
+            <option value=" (GMT+08:00) Kuala Lumpur, Singapore ">
+              (GMT+08:00) Kuala Lumpur, Singapore
+            </option>
+            <option value=" (GMT+08:00) Irkutsk, Ulaan Bataar ">
+              (GMT+08:00) Irkutsk, Ulaan Bataar
+            </option>
+            <option value=" (GMT+08:00) Perth ">(GMT+08:00) Perth</option>
+            <option value=" (GMT+08:00) Taipei ">(GMT+08:00) Taipei</option>
+            <option value=" (GMT+09:00) Osaka, Sapporo, Tokyo ">
+              (GMT+09:00) Osaka, Sapporo, Tokyo
+            </option>
+            <option value=" (GMT+09:00) Seoul ">(GMT+09:00) Seoul</option>
+            <option value=" (GMT+09:00) Yakutsk ">(GMT+09:00) Yakutsk</option>
+            <option value=" (GMT+09:30) Adelaide ">(GMT+09:30) Adelaide</option>
+            <option value=" (GMT+09:30) Darwin ">(GMT+09:30) Darwin</option>
+            <option value=" (GMT+10:00) Brisbane ">(GMT+10:00) Brisbane</option>
+            <option value=" (GMT+10:00) Canberra, Melbourne, Sydney ">
+              (GMT+10:00) Canberra, Melbourne, Sydney
+            </option>
+            <option value=" (GMT+10:00) Hobart ">(GMT+10:00) Hobart</option>
+            <option value=" (GMT+10:00) Guam, Port Moresby ">
+              (GMT+10:00) Guam, Port Moresby
+            </option>
+            <option value=" (GMT+10:00) Vladivostok ">
+              (GMT+10:00) Vladivostok
+            </option>
+            <option value=" (GMT+11:00) Magadan, Solomon Is., New Caledonia ">
+              (GMT+11:00) Magadan, Solomon Is., New Caledonia
+            </option>
+            <option value=" (GMT+12:00) Auckland, Wellington ">
+              (GMT+12:00) Auckland, Wellington
+            </option>
+            <option value=" (GMT+12:00) Fiji, Kamchatka, Marshall Is. ">
+              (GMT+12:00) Fiji, Kamchatka, Marshall Is.
+            </option>
+            <option value=" (GMT+13:00) Nuku'alofa ">
+              (GMT+13:00) Nuku'alofa
+            </option>
+          </select>
+        </div>
+        <div class="section"><span>2</span>Vehicle Info</div>
+        <div class="inner-wrap">
+          <p>
+            Please tell us what you want us to do in clear and concise detail.
+            Verbiage should include I.e. “Full ground up restoration” or “Update
+            the drivetrain to an LS3 and a 5 Speed overdrive transmission” or
+            “Custom fabricate a convertible top and rebuild engine and repair
+            the brakes” or whatever the project is. Too many people tell me
+            what’s wrong with their vehicles but never say what they want us to
+            do about it and unfortunately we simply don’t know how to respond. I
+            need you to specify “I want FantomWorks to do the following to my
+            vehicle XXXX”. This is to help me define whether you have a concept
+            of your project. I’ve been asked on requests to install a 35K
+            Supercharged Coyote engine, a 10K carbon fiber overdrive
+            transmission and a 15K Independent Rear Suspension system for a 15K
+            total budget. Only God can help someone with that one.
+          </p>
+          <label
+            ><input
+              type="text"
+              name="year"
+              id="year"
+              placeholder="Year"
+              required="required"
+          /></label>
+          <label
+            ><input
+              type="text"
+              name="make"
+              id="make"
+              placeholder="Make"
+              required="required"
+          /></label>
+          <label
+            ><input
+              type="text"
+              name="model"
+              id="model"
+              placeholder="Model"
+              required="required"
+          /></label>
+          <center>
+            <h3>Please upload up to 4 images of your project.</h3>
+            <div class="inner-wrap">
+              Please make sure you upload photos as they are invaluable to Dan
+              getting an understanding of the current status of the vehicle. If
+              you <b>DO NOT</b> upload photos the chances of you hearing from
+              Dan decrease exponentially.
+            </div>
+            <input type="file" name="fileToUpload_1" id="fileToUpload_1" />
+            <input type="file" name="fileToUpload_2" id="fileToUpload_2" />
+            <input type="file" name="fileToUpload_3" id="fileToUpload_3" />
+            <input type="file" name="fileToUpload_4" id="fileToUpload_4" />
+          </center>
+          <br />
+          Vehicle History (When did you acquire it, when did it last run, recent
+          work completed)
+          <textarea
+            name="projectDescription"
+            id="projectDescription"
+            placeholder="Please provide some history of your project to include a description of the vehicle’s current state (complete, incomplete, running, driving, basket case). Text will be limited to 5000 characters."
+            rows="10"
+            cols="140"
+            maxlength="5000"
+          ></textarea>
+          <br />
+          Tasks You Want Accomplished
+          <textarea
+            name="projectOutline1"
+            id="projectOutline1"
+            placeholder="Please list each task on a separate line with details:
+- Engine rebuild/replacement
+- Transmission work
+- Paint work
+- Interior restoration  
+- Bodywork
+- Suspension upgrades
+- Brake system
+- Electrical work"
+            rows="10"
+            cols="140"
+            maxlength="5000"
+          ></textarea>
+          <br />
+          Project Overview:
+          <textarea
+            name="projectHours"
+            id="projectHours"
+            placeholder="Just so we understand how much work you think this will be, please take a guess at how many hours you think the work will take. Remember, we haven’t seen your car so we have no idea and we’re just trying to understand whether this is a small, medium, or big project."
+          ></textarea>
+          <br />
+          <textarea
+            name="projectParts"
+            id="projectParts"
+            placeholder="If you had to take a guess at how much the parts will cost to do the work you’re asking, what would that guess be. Keep in mind at this time you know more about your build than we do."
+          ></textarea>
+          <br />
+          <textarea
+            name="projectOutline11"
+            id="projectOutline11"
+            placeholder="Additional Notes (if needed)"
+            rows="1"
+            cols="140"
+            maxlength="5000"
+          ></textarea>
+        </div>
+        <br />
+        <div class="button-container">
+          <input
+            type="button"
+            name="cancel"
+            value="Cancel Your Submission"
+            class="cancel-button"
+            onClick="window.location.href='http://FantomWorks.com';"
+          />
+          <input type="submit" value="Submit Project" class="submit-button" />
+        </div>
+      </form>
+    </div>
+  </body>
+</html>

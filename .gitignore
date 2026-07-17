@@ -1,0 +1,24 @@
+# Secrets — never commit
+*.local.txt
+.env
+.env.*
+!.env.example
+secrets/
+
+# Legacy DB dumps / customer data — PII, never commit
+exports/*.sql
+exports/*.csv
+exports/converted/
+exports/uploads/
+# Converted dataset the app reads in dev mode — contains customer PII
+web/lib/real-data.json
+
+# Node
+node_modules/
+.next/
+dist/
+build/
+*.log
+
+# OS
+.DS_Store
