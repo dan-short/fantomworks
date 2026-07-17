@@ -16,11 +16,13 @@ export function ageBucket(receivedDate: string | null): AgeBucket {
   return 'cold'
 }
 
-export const AGE_STYLES: Record<AgeBucket, { dot: string; label: string }> = {
-  fresh: { dot: 'bg-emerald-500', label: '< 30 days' },
-  aging: { dot: 'bg-yellow-400', label: '30–60 days' },
-  stale: { dot: 'bg-red-500', label: '60–90 days' },
-  cold: { dot: 'bg-red-900', label: '> 90 days' },
+// Canonical per-bucket presentation — one source of truth for dot color,
+// tooltip copy, and short legend label. Used by the call-log table.
+export const AGE_META: Record<AgeBucket, { dot: string; tip: string; label: string }> = {
+  fresh: { dot: 'bg-emerald-500', tip: 'Received less than 30 days ago', label: '< 30 days' },
+  aging: { dot: 'bg-amber-400', tip: 'Received 30–60 days ago', label: '30–60 days' },
+  stale: { dot: 'bg-orange-500', tip: 'Received 60–90 days ago', label: '60–90 days' },
+  cold: { dot: 'bg-red-600', tip: 'Received more than 90 days ago — getting old', label: '> 90 days' },
 }
 
 export function daysAgo(n: number): string {
