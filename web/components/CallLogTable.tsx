@@ -16,6 +16,12 @@ function fmtTs(ts: string | null): string {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
 
+// Legacy images still live on the old Bluehost host; point at them directly for now.
+// (Phase 2 moves these into Supabase Storage.)
+const UPLOADS_BASE =
+  process.env.NEXT_PUBLIC_UPLOADS_BASE_URL ?? 'https://projects.fantomworks.com/uploads/'
+const isImageFile = (name: string) => /\.(jpe?g|png|gif|webp|heic|bmp)$/i.test(name)
+
 // Status transitions available from a row, mirroring the legacy action buttons.
 const STATUS_ACTIONS: { status: SubmissionStatus; label: string; confirm?: string }[] = [
   { status: 'pending', label: 'Pending' },
@@ -135,6 +141,11 @@ export function CallLogTable({
                     >
                       {isOpen ? 'Hide details' : 'Show details'}
                     </button>
+                    {s.images.length > 0 && (
+                      <span className="ml-2 text-xs text-neutral-500" title={`${s.images.length} photo(s)`}>
+                        📷 {s.images.length}
+                      </span>
+                    )}
                   </td>
 
                   <td className="p-3">
@@ -264,15 +275,31 @@ export function CallLogTable({
                               <h4 className="text-xs uppercase tracking-wide text-neutral-500 mb-1">
                                 Images ({s.images.length})
                               </h4>
-                              <div className="flex gap-2">
-                                {s.images.map((img) => (
-                                  <span
-                                    key={img}
-                                    className="grid h-16 w-16 place-items-center rounded bg-neutral-800 text-[10px] text-neutral-500 text-center px-1"
-                                  >
-                                    {img}
-                                  </span>
-                                ))}
+                              <div className="flex flex-wrap gap-2">
+                                {s.images.map((img) => {
+                                  const url = UPLOADS_BASE + img
+                                  return isImageFile(img) ? (
+                                    <a key={img} href={url} target="_blank" rel="noreferrer" title={img}>
+                                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                                      <img
+                                        src={url}
+                                        alt={img}
+                                        loading="lazy"
+                                        className="h-16 w-16 rounded bg-neutral-800 object-cover ring-1 ring-neutral-700 hover:ring-neutral-400"
+                                      />
+                                    </a>
+                                  ) : (
+                                    <a
+                                      key={img}
+                                      href={url}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="grid h-16 w-16 place-items-center rounded bg-neutral-800 text-[10px] text-neutral-400 text-center px-1 ring-1 ring-neutral-700 hover:ring-neutral-400"
+                                    >
+                                      {img.split('.').pop()?.toUpperCase()}
+                                    </a>
+                                  )
+                                })}
                               </div>
                             </div>
                           )}
