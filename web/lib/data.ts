@@ -224,4 +224,9 @@ export const devStore = {
     const row = devSubs().find((s) => s.id === id)
     if (row) Object.assign(row, patch)
   },
+  setStages(id: number, stages: DetailStage[]) {
+    const all = devDetails()
+    if (stages.length) all[id] = stages
+    else delete all[id]
+  },
 }

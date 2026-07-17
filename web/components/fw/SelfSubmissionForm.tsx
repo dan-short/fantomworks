@@ -20,6 +20,7 @@ import {
   User,
 } from 'lucide-react'
 import { FwButton, FwDialog } from './primitives'
+import { StorageField, HistoryTextarea } from './form-fields'
 import { VEHICLES, MAKES } from '@/lib/vehicles'
 import {
   uploadPhoto,
@@ -44,6 +45,8 @@ type Form = {
   budget: string
   startWhen: 'asap' | 'custom'
   startCustom: string
+  storageType: string
+  storageYears: string
   tasks: Task[]
   description: string
   photos: UploadedPhoto[]
@@ -62,6 +65,8 @@ const BLANK: Form = {
   budget: '',
   startWhen: 'asap',
   startCustom: '',
+  storageType: '',
+  storageYears: '',
   tasks: [{ topic: '', desc: '', parts: '', hours: '' }],
   description: '',
   photos: [],
@@ -896,10 +901,10 @@ export function SelfSubmissionForm() {
               <Row2>
                 <div style={{ minWidth: 0 }}>
                   <Label req>
-                    ZIP code{' '}
+                    Vehicle ZIP code{' '}
                     <WhyAsk>
-                      We use it to estimate how far you are from our shop — it helps us plan pickup,
-                      delivery, and visits.
+                      The ZIP where the vehicle is kept — we use it to estimate how far it is from
+                      our shop, which helps us plan pickup, delivery, and visits.
                     </WhyAsk>
                   </Label>
                   <input
@@ -1066,6 +1071,12 @@ export function SelfSubmissionForm() {
                   />
                 )}
               </Field>
+              <StorageField
+                type={f.storageType}
+                years={f.storageYears}
+                onType={(v) => setF((s) => ({ ...s, storageType: v }))}
+                onYears={(v) => setF((s) => ({ ...s, storageYears: v }))}
+              />
             </div>
           )}
 
@@ -1299,10 +1310,9 @@ export function SelfSubmissionForm() {
                 </p>
               </div>
               <Field label="History & notes">
-                <textarea
-                  className="fw-field"
+                <HistoryTextarea
                   value={f.description}
-                  onChange={set('description')}
+                  onChange={(v) => setF((s) => ({ ...s, description: v }))}
                   placeholder={
                     'e.g. Bought it in 2001, did a budget rebuild myself over five years. Runs and drives but there’s an oil leak into the bell housing. I have a binder of receipts and a specs sheet I can share…'
                   }
@@ -1461,7 +1471,10 @@ export function SelfSubmissionForm() {
                     'Vehicle',
                     [f.year, f.make, f.model].filter(Boolean).join(' ') +
                       (f.budget ? `  ·  budget $${f.budget}` : '') +
-                      `\nStart: ${f.startWhen === 'asap' ? 'As soon as possible' : f.startCustom || '—'}`,
+                      `\nStart: ${f.startWhen === 'asap' ? 'As soon as possible' : f.startCustom || '—'}` +
+                      (f.storageType
+                        ? `\nStored: ${f.storageType}${f.storageYears ? ` · ${f.storageYears} yr` : ''}`
+                        : ''),
                     1,
                   ],
                   [

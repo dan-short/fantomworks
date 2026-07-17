@@ -7,6 +7,7 @@
 import * as React from 'react'
 import { Phone, Car, Wrench, StickyNote, CircleCheck, Trash } from 'lucide-react'
 import { FwButton, Badge } from './primitives'
+import { StorageField, HistoryTextarea } from './form-fields'
 
 const STAFF = ['Melissa', 'Hailey', 'Mike', 'Dan'] as const
 
@@ -19,9 +20,12 @@ type Form = {
   schedule: string
   city: string
   state: string
+  zip: string
   year: string
   make: string
   model: string
+  storageType: string
+  storageYears: string
   tasks: string[]
   description: string
   addedBy: string
@@ -36,9 +40,12 @@ const blank = (addedBy = 'Hailey'): Form => ({
   schedule: '',
   city: '',
   state: '',
+  zip: '',
   year: '',
   make: '',
   model: '',
+  storageType: '',
+  storageYears: '',
   tasks: [''],
   description: '',
   addedBy,
@@ -373,6 +380,16 @@ export function OfficeSubmissionForm() {
             <Field label="State">
               <input className="fw-field" value={f.state} onChange={set('state')} placeholder="VA" />
             </Field>
+            <Field label="Vehicle ZIP code" hint="Where the vehicle is kept — used to estimate distance from the shop.">
+              <input
+                className="fw-field tnum"
+                style={monoStyle}
+                value={f.zip}
+                onChange={(e) => setF((s) => ({ ...s, zip: e.target.value.replace(/\D/g, '').slice(0, 5) }))}
+                inputMode="numeric"
+                placeholder="23517"
+              />
+            </Field>
           </div>
         </SectionCard>
 
@@ -403,6 +420,14 @@ export function OfficeSubmissionForm() {
                 placeholder="Camaro"
               />
             </Field>
+          </div>
+          <div style={{ marginTop: 14 }}>
+            <StorageField
+              type={f.storageType}
+              years={f.storageYears}
+              onType={(v) => setF((s) => ({ ...s, storageType: v }))}
+              onYears={(v) => setF((s) => ({ ...s, storageYears: v }))}
+            />
           </div>
         </SectionCard>
 
@@ -478,11 +503,10 @@ export function OfficeSubmissionForm() {
             label="Description"
             hint="History, condition, what they’re after, deadlines — however they described it."
           >
-            <textarea
-              className="fw-field"
+            <HistoryTextarea
               value={f.description}
-              onChange={set('description')}
-              rows={6}
+              onChange={(v) => setF((s) => ({ ...s, description: v }))}
+              minHeight={130}
               placeholder={
                 'e.g. Owned since 2001, did a budget rebuild himself. Runs and drives but leaking oil into the bell housing. Wants it done right this time — respray in the original green, interior back to stock bench. Has a binder of receipts. Motivated, flexible on timing.'
               }

@@ -12,6 +12,7 @@ function base(over: Partial<Submission>): Submission {
     city: null, state_country: null, time_zone: null, distance_miles: null,
     year: null, make: null, model: null, budget: null, project_start: null,
     project_description: null, restoration_decision_matrix: null,
+    storage_type: null, storage_years: null,
     status: 'new', received_date: daysAgo(5), original_date: null, bumped_at: null,
     added_by: 'Online Form', notes: null,
     call_attempt_one: null, call_attempt_two: null, call_attempt_three: null,
@@ -27,6 +28,7 @@ export const seedSubmissions: Submission[] = [
     state_country: 'VA', zipcode: '23188', distance_miles: 41, time_zone: 'EST',
     year: '1969', make: 'Chevrolet', model: 'Camaro', budget: 85000,
     project_description: 'Full frame-off restoration. Numbers-matching 350.',
+    storage_type: 'Indoor — unheated garage / barn', storage_years: 12,
     status: 'new', received_date: daysAgo(9),
   }),
   base({

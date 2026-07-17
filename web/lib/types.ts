@@ -37,6 +37,10 @@ export interface Submission {
   project_description: string | null
   restoration_decision_matrix: string | null
 
+  // Vehicle storage condition (most recent) + years in that condition.
+  storage_type: string | null
+  storage_years: number | null
+
   status: SubmissionStatus
   received_date: string | null // ISO date; null when legacy sentinel
   original_date: string | null

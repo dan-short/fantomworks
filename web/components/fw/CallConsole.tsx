@@ -14,6 +14,7 @@ import { useRouter } from 'next/navigation'
 import {
   Search,
   Plus,
+  Pencil,
   Moon,
   Sun,
   ChevronLeft,
@@ -27,10 +28,11 @@ import {
 import type { Submission, DetailsMap, SubmissionStatus } from '@/lib/types'
 import { STATUS_VIEWS } from '@/lib/types'
 import type { SortKey } from '@/lib/data'
-import { UPLOADS_BASE, isImageFile } from '@/lib/images'
+import { resolvePhotoUrl } from '@/lib/images'
 import { logCallAttempt, logEmailAttempt, setStatus, addNote, bump } from '@/app/actions/submissions'
 import { signOut } from '@/app/login/actions'
 import { LeadCard, type LeadActionKey } from './LeadCard'
+import { LeadEditDialog, type EditSection } from './LeadEditDialog'
 import { PipelineNav, FwButton, FwDialog } from './primitives'
 
 // The server assigns each sort field a fixed natural direction (see applySort in
@@ -243,6 +245,8 @@ export function CallConsole({
   const [noteText, setNoteText] = React.useState('')
   const [photos, setPhotos] = React.useState<{ lead: Submission; idx: number } | null>(null)
   const [confirming, setConfirming] = React.useState<Confirming | null>(null)
+  const [editMode, setEditMode] = React.useState(false)
+  const [editing, setEditing] = React.useState<{ lead: Submission; section: EditSection } | null>(null)
 
   // Search box: local draft that debounces into the URL. Reset when the view changes.
   const [qInput, setQInput] = React.useState(search)
@@ -505,6 +509,29 @@ export function CallConsole({
             <PipelineNav active={view} onChange={(k) => nav(buildUrl({ view: k }))} tabs={tabs} />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <button
+              onClick={() => setEditMode((e) => !e)}
+              title="Toggle edit mode — click any part of a lead to edit it"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                border: editMode ? '1px solid var(--accent)' : steelToggleBorder,
+                background: editMode ? 'var(--accent)' : 'rgba(255,255,255,.06)',
+                color: editMode ? '#fff' : 'var(--steel-ink)',
+                cursor: 'pointer',
+                height: 32,
+                padding: '0 12px',
+                borderRadius: 'var(--radius-sm)',
+                fontFamily: 'var(--font-display)',
+                fontSize: 11,
+                fontWeight: 600,
+                letterSpacing: '.06em',
+                textTransform: 'uppercase',
+              }}
+            >
+              <Pencil size={13} /> {editMode ? 'Editing' : 'Edit'}
+            </button>
             <SearchField value={qInput} onChange={setQInput} onClear={() => setQInput('')} />
             <div style={{ display: 'flex', border: steelToggleBorder, borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
               {(
@@ -601,6 +628,8 @@ export function CallConsole({
                 stages={details[l.id] ?? []}
                 compact={density === 'compact'}
                 selected={sel.has(l.id)}
+                editMode={editMode}
+                onEditSection={(lead, section) => setEditing({ lead, section })}
                 onToggleSelect={toggleSel}
                 onAction={onAction}
                 onAddNote={(lead) => {
@@ -652,6 +681,16 @@ export function CallConsole({
           </nav>
         )}
       </main>
+
+      {/* ── Per-section edit dialog ── */}
+      {editing && (
+        <LeadEditDialog
+          lead={editing.lead}
+          stages={details[editing.lead.id] ?? []}
+          section={editing.section}
+          onClose={() => setEditing(null)}
+        />
+      )}
 
       {/* ── Add-note dialog ── */}
       <FwDialog
@@ -714,7 +753,7 @@ export function CallConsole({
             const list = photos.lead.images ?? []
             const i = photos.idx
             const name = list[i]
-            const url = name && isImageFile(name) ? UPLOADS_BASE + name : null
+            const url = name ? resolvePhotoUrl(name) : null
             const go = (d: number) => setPhotos((p) => (p ? { ...p, idx: (p.idx + d + list.length) % list.length } : p))
             return (
               <div>

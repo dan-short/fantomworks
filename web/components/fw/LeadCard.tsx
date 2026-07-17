@@ -19,9 +19,11 @@ import {
   Trash2,
   Undo,
   ChevronRight,
+  Pencil,
 } from 'lucide-react'
 import type { Submission, DetailStage, SubmissionStatus } from '@/lib/types'
-import { UPLOADS_BASE, isImageFile } from '@/lib/images'
+import type { EditSection } from './LeadEditDialog'
+import { resolvePhotoUrl } from '@/lib/images'
 import {
   AgeSpine,
   Badge,
@@ -314,11 +316,80 @@ function PhotoTile({ src, name, onClick }: { src: string | null; name: string; o
   )
 }
 
+// In edit mode, wraps a card region so hovering shows a dashed outline + "Edit"
+// chip and clicking opens that section's modal. Inner controls are click-through
+// disabled while editing so the whole region acts as one button. Outside edit
+// mode it renders children untouched (no extra wrapper, layout unchanged).
+function EditZone({
+  editMode,
+  label,
+  onClick,
+  children,
+  style,
+}: {
+  editMode: boolean
+  label: string
+  onClick?: () => void
+  children: React.ReactNode
+  style?: React.CSSProperties
+}) {
+  const [hover, setHover] = React.useState(false)
+  if (!editMode || !onClick) return <>{children}</>
+  return (
+    <div
+      onClick={(e) => {
+        e.stopPropagation()
+        onClick()
+      }}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        position: 'relative',
+        cursor: 'pointer',
+        borderRadius: 'var(--radius-sm)',
+        outline: `1.5px dashed ${hover ? 'var(--accent)' : 'transparent'}`,
+        outlineOffset: 1,
+        background: hover ? 'color-mix(in oklch, var(--accent) 5%, transparent)' : 'transparent',
+        transition: 'outline-color .1s ease, background .1s ease',
+        ...style,
+      }}
+    >
+      <div style={{ pointerEvents: 'none' }}>{children}</div>
+      {hover && (
+        <span
+          style={{
+            position: 'absolute',
+            top: 3,
+            right: 3,
+            zIndex: 6,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 3,
+            padding: '2px 6px',
+            borderRadius: 'var(--radius-xs)',
+            background: 'var(--accent)',
+            color: '#fff',
+            fontFamily: 'var(--font-display)',
+            fontSize: 9.5,
+            fontWeight: 600,
+            letterSpacing: '.08em',
+            textTransform: 'uppercase',
+          }}
+        >
+          <Pencil size={10} /> {label}
+        </span>
+      )}
+    </div>
+  )
+}
+
 export function LeadCard({
   lead,
   stages,
   compact = false,
   selected = false,
+  editMode = false,
+  onEditSection,
   onToggleSelect,
   onAction,
   onAddNote,
@@ -329,6 +400,8 @@ export function LeadCard({
   stages: DetailStage[]
   compact?: boolean
   selected?: boolean
+  editMode?: boolean
+  onEditSection?: (lead: Submission, section: EditSection) => void
   onToggleSelect?: (id: number) => void
   onAction: (lead: Submission, k: LeadActionKey) => void
   onAddNote: (lead: Submission) => void
@@ -359,6 +432,11 @@ export function LeadCard({
 
   const act = (k: LeadActionKey) => onAction(lead, k)
   const confirm = (item: { k: LeadActionKey; label: string; message: string; danger?: boolean }) => onConfirm(lead, item)
+  const edit = (section: EditSection) => onEditSection?.(lead, section)
+  const storageLine =
+    lead.storage_type
+      ? `${lead.storage_type}${lead.storage_years != null ? ` · ${lead.storage_years} yr` : ''}`
+      : null
 
   // ── Compact summary row ──
   if (compact && !expanded) {
@@ -457,100 +535,124 @@ export function LeadCard({
       <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '0.68fr 128px 1.95fr 0.8fr', minWidth: 0 }}>
         {/* ── Customer ── */}
         <div style={{ padding: '13px 14px 13px 30px', borderRight: '1px solid var(--border-hairline)', minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 5 }}>
-            <span style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 600, letterSpacing: '.01em', color: 'var(--ink)', lineHeight: 1.05 }}>
-              {lead.first_name} {lead.last_name}
-            </span>
-            {online ? <Badge tone="sky">Online</Badge> : <Badge tone="amber">Office{lead.added_by ? ` · ${lead.added_by}` : ''}</Badge>}
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 14, fontWeight: 600, color: 'var(--ink)' }}>
-            <span style={{ color: 'var(--accent)', display: 'flex' }}>
-              <Car size={16} />
-            </span>
-            {vehicle || '—'}
-          </div>
-          <div
-            className="tnum"
-            style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: 'var(--muted)', marginTop: 4, fontFamily: 'var(--font-mono)' }}
-          >
-            <MapPin size={12} />
-            {loc}
-            <span style={{ color: 'var(--faint)', fontSize: 10 }}>#{lead.legacy_id}</span>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 1, marginTop: 9, paddingTop: 9, borderTop: '1px dashed var(--border-hairline)' }}>
-            {lead.phone && (
-              <a href={`tel:${lead.phone}`} style={{ textDecoration: 'none' }}>
-                <Meta icon={<Phone size={13} />} mono>
-                  {lead.phone}
+          <EditZone editMode={editMode} label="Customer" onClick={() => edit('customer')}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 5 }}>
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 600, letterSpacing: '.01em', color: 'var(--ink)', lineHeight: 1.05 }}>
+                {lead.first_name} {lead.last_name}
+              </span>
+              {online ? <Badge tone="sky">Online</Badge> : <Badge tone="amber">Office{lead.added_by ? ` · ${lead.added_by}` : ''}</Badge>}
+            </div>
+          </EditZone>
+          <EditZone editMode={editMode} label="Vehicle" onClick={() => edit('vehicle')} style={{ marginTop: 3 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 14, fontWeight: 600, color: 'var(--ink)' }}>
+              <span style={{ color: 'var(--accent)', display: 'flex' }}>
+                <Car size={16} />
+              </span>
+              {vehicle || (editMode ? <span style={{ color: 'var(--faint)', fontWeight: 500 }}>Add vehicle…</span> : '—')}
+            </div>
+          </EditZone>
+          <EditZone editMode={editMode} label="Customer" onClick={() => edit('customer')} style={{ marginTop: 3 }}>
+            <div
+              className="tnum"
+              style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: 'var(--muted)', marginTop: 4, fontFamily: 'var(--font-mono)' }}
+            >
+              <MapPin size={12} />
+              {loc}
+              <span style={{ color: 'var(--faint)', fontSize: 10 }}>#{lead.legacy_id}</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 1, marginTop: 9, paddingTop: 9, borderTop: '1px dashed var(--border-hairline)' }}>
+              {lead.phone && (
+                <a href={`tel:${lead.phone}`} style={{ textDecoration: 'none' }}>
+                  <Meta icon={<Phone size={13} />} mono>
+                    {lead.phone}
+                  </Meta>
+                </a>
+              )}
+              {lead.alt_phone && (
+                <a href={`tel:${lead.alt_phone}`} style={{ textDecoration: 'none' }}>
+                  <Meta icon={<Phone size={13} />} mono faint>
+                    {lead.alt_phone}
+                  </Meta>
+                </a>
+              )}
+              {lead.email && (
+                <a href={`mailto:${lead.email}`} style={{ textDecoration: 'none' }}>
+                  <Meta icon={<Mail size={13} />}>{lead.email}</Meta>
+                </a>
+              )}
+              {lead.call_schedule && (
+                <Meta icon={<Clock size={13} />} faint>
+                  {lead.call_schedule}
                 </Meta>
-              </a>
-            )}
-            {lead.alt_phone && (
-              <a href={`tel:${lead.alt_phone}`} style={{ textDecoration: 'none' }}>
-                <Meta icon={<Phone size={13} />} mono faint>
-                  {lead.alt_phone}
-                </Meta>
-              </a>
-            )}
-            {lead.email && (
-              <a href={`mailto:${lead.email}`} style={{ textDecoration: 'none' }}>
-                <Meta icon={<Mail size={13} />}>{lead.email}</Meta>
-              </a>
-            )}
-            {lead.call_schedule && (
-              <Meta icon={<Clock size={13} />} faint>
-                {lead.call_schedule}
-              </Meta>
-            )}
-          </div>
+              )}
+              {!lead.phone && !lead.email && !lead.call_schedule && editMode && (
+                <span style={{ fontSize: 11.5, color: 'var(--faint)' }}>Add contact info…</span>
+              )}
+            </div>
+          </EditZone>
         </div>
 
         {/* ── Photos ── */}
         <div style={{ padding: '13px 12px', borderRight: '1px solid var(--border-hairline)', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-          <Label>Photos{photos.length ? ` (${photos.length})` : ''}</Label>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 2 }}>
-            {photos.length > 0 ? (
-              photos.slice(0, 4).map((p, i) => (
-                <PhotoTile key={i} src={isImageFile(p) ? UPLOADS_BASE + p : null} name={p} onClick={() => onOpenPhotos(lead, i)} />
-              ))
-            ) : (
-              <div
-                style={{
-                  width: '100%',
-                  height: 40,
-                  borderRadius: 'var(--radius-sm)',
-                  border: '1px dashed var(--border-strong)',
-                  display: 'grid',
-                  placeItems: 'center',
-                  color: 'var(--faint)',
-                  fontSize: 10.5,
-                }}
-              >
-                No photos
-              </div>
-            )}
-          </div>
+          <EditZone editMode={editMode} label="Photos" onClick={() => edit('photos')}>
+            <Label>Photos{photos.length ? ` (${photos.length})` : ''}</Label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 2 }}>
+              {photos.length > 0 ? (
+                photos.slice(0, 4).map((p, i) => (
+                  <PhotoTile key={i} src={resolvePhotoUrl(p)} name={p} onClick={() => onOpenPhotos(lead, i)} />
+                ))
+              ) : (
+                <div
+                  style={{
+                    width: '100%',
+                    height: 40,
+                    borderRadius: 'var(--radius-sm)',
+                    border: '1px dashed var(--border-strong)',
+                    display: 'grid',
+                    placeItems: 'center',
+                    color: editMode ? 'var(--accent)' : 'var(--faint)',
+                    fontSize: 10.5,
+                  }}
+                >
+                  {editMode ? '+ Add photos' : 'No photos'}
+                </div>
+              )}
+            </div>
+          </EditZone>
         </div>
 
         {/* ── Project ── */}
         <div style={{ padding: '13px 16px', borderRight: '1px solid var(--border-hairline)', minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
-            {lead.budget != null && (
-              <span className="tnum" style={{ fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600, color: 'var(--ink)' }}>
-                Budget ${lead.budget.toLocaleString()}
-              </span>
-            )}
-            {lead.project_start && <span style={{ fontSize: 11, color: 'var(--muted)' }}>Start · {lead.project_start}</span>}
-          </div>
-          {lead.project_description && (
-            <>
-              <Label>Description</Label>
-              <p style={{ margin: '0 0 6px', fontSize: 12.5, lineHeight: 1.55, color: 'var(--ink-2)', textWrap: 'pretty' }}>
-                {lead.project_description}
-              </p>
-            </>
-          )}
-          {stages.length > 0 && (
+          <EditZone editMode={editMode} label="Vehicle" onClick={() => edit('vehicle')}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
+              {lead.budget != null && (
+                <span className="tnum" style={{ fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600, color: 'var(--ink)' }}>
+                  Budget ${lead.budget.toLocaleString()}
+                </span>
+              )}
+              {lead.project_start && <span style={{ fontSize: 11, color: 'var(--muted)' }}>Start · {lead.project_start}</span>}
+              {storageLine && (
+                <span style={{ fontSize: 11, color: 'var(--muted)' }}>Stored · {storageLine}</span>
+              )}
+              {lead.budget == null && !lead.project_start && !storageLine && editMode && (
+                <span style={{ fontSize: 12, color: 'var(--faint)' }}>Add budget, start &amp; storage…</span>
+              )}
+            </div>
+          </EditZone>
+          <EditZone editMode={editMode} label="History" onClick={() => edit('history')}>
+            {lead.project_description ? (
+              <>
+                <Label>Description</Label>
+                <p style={{ margin: '0 0 6px', fontSize: 12.5, lineHeight: 1.55, color: 'var(--ink-2)', textWrap: 'pretty' }}>
+                  {lead.project_description}
+                </p>
+              </>
+            ) : editMode ? (
+              <div style={{ fontSize: 12, color: 'var(--faint)', padding: '2px 0 6px' }}>Add description…</div>
+            ) : null}
+          </EditZone>
+          <EditZone editMode={editMode} label="Tasks" onClick={() => edit('tasks')}>
+          {stages.length > 0 ? (
             <div style={{ marginTop: 12 }}>
               <Label>{isOffice ? 'Work Requested' : 'Estimate / Tasks'}</Label>
               <div style={{ borderTop: '1px solid var(--border-hairline)' }}>
@@ -622,7 +724,10 @@ export function LeadCard({
                 </div>
               )}
             </div>
-          )}
+          ) : editMode ? (
+            <div style={{ fontSize: 12, color: 'var(--faint)', padding: '2px 0' }}>Add tasks…</div>
+          ) : null}
+          </EditZone>
         </div>
 
         {/* ── Activity rail ── */}
