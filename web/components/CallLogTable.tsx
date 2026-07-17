@@ -76,6 +76,7 @@ export function CallLogTable({
             const bucket = ageBucket(s.received_date)
             const isOpen = expanded === s.id
             const stages = details[s.id]
+            const imgs = s.images ?? []
             return (
               <Fragment key={s.id}>
                 <tr className="align-top hover:bg-neutral-900/50">
@@ -141,9 +142,9 @@ export function CallLogTable({
                     >
                       {isOpen ? 'Hide details' : 'Show details'}
                     </button>
-                    {s.images.length > 0 && (
-                      <span className="ml-2 text-xs text-neutral-500" title={`${s.images.length} photo(s)`}>
-                        📷 {s.images.length}
+                    {imgs.length > 0 && (
+                      <span className="ml-2 text-xs text-neutral-500" title={`${imgs.length} photo(s)`}>
+                        📷 {imgs.length}
                       </span>
                     )}
                   </td>
@@ -270,13 +271,13 @@ export function CallLogTable({
                           ) : (
                             <p className="text-neutral-500 text-sm">No detail breakdown.</p>
                           )}
-                          {s.images.length > 0 && (
+                          {imgs.length > 0 && (
                             <div className="mt-3">
                               <h4 className="text-xs uppercase tracking-wide text-neutral-500 mb-1">
-                                Images ({s.images.length})
+                                Images ({imgs.length})
                               </h4>
                               <div className="flex flex-wrap gap-2">
-                                {s.images.map((img) => {
+                                {imgs.map((img) => {
                                   const url = UPLOADS_BASE + img
                                   return isImageFile(img) ? (
                                     <a key={img} href={url} target="_blank" rel="noreferrer" title={img}>

@@ -39,6 +39,15 @@ function devDetails(): DetailsMap {
   return g.__fw_details!
 }
 
+// Supabase rows store images as image_name_1..4 columns; the app wants an array.
+// Also guarantees `images` is never undefined regardless of source.
+function fromRow(row: Record<string, unknown>): Submission {
+  const images = [row.image_name_1, row.image_name_2, row.image_name_3, row.image_name_4].filter(
+    (v): v is string => typeof v === 'string' && v.length > 0,
+  )
+  return { ...(row as unknown as Submission), images }
+}
+
 export type SortKey = 'received' | 'name' | 'vehicle' | 'distance'
 
 function sortSubs(rows: Submission[], sort: SortKey): Submission[] {
@@ -79,7 +88,7 @@ export async function getSubmissions(
     }
     const { data, error } = await q
     if (error) throw error
-    return sortSubs((data ?? []) as Submission[], sort)
+    return sortSubs((data ?? []).map(fromRow), sort)
   }
 
   let rows = devSubs().filter((s) => s.status === status)
@@ -115,7 +124,7 @@ export async function getSubmission(id: number): Promise<Submission | null> {
     const supabase = await createClient()
     const { data, error } = await supabase.from('submissions').select('*').eq('id', id).single()
     if (error) return null
-    return data as Submission
+    return fromRow(data)
   }
   return devSubs().find((s) => s.id === id) ?? null
 }
