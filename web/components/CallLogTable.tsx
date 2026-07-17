@@ -57,10 +57,10 @@ export function CallLogTable({
   }
 
   return (
-    <div className={`overflow-x-auto rounded-lg border border-neutral-800 ${pending ? 'opacity-70' : ''}`}>
+    <div className={`h-full overflow-auto rounded-lg border border-neutral-800 ${pending ? 'opacity-70' : ''}`}>
       <table className="w-full text-sm">
-        <thead className="bg-neutral-900 text-neutral-400 text-left">
-          <tr>
+        <thead className="sticky top-0 z-10 text-neutral-300 text-left">
+          <tr className="[&>th]:bg-neutral-900 [&>th]:border-b [&>th]:border-neutral-700">
             <th className="p-3 font-medium">Customer</th>
             <th className="p-3 font-medium">Contact</th>
             <th className="p-3 font-medium">Location</th>

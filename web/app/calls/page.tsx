@@ -31,8 +31,8 @@ export default async function CallsPage({
   const label = STATUS_VIEWS.find((v) => v.key === view)?.label ?? view
 
   return (
-    <div>
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+    <div className="flex min-h-0 flex-1 flex-col p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4 shrink-0">
         <div>
           <h1 className="text-lg font-semibold">{label}</h1>
           <p className="text-sm text-neutral-400">
@@ -78,7 +78,9 @@ export default async function CallsPage({
         </div>
       </div>
 
-      <CallLogTable submissions={submissions} details={details} />
+      <div className="min-h-0 flex-1">
+        <CallLogTable submissions={submissions} details={details} />
+      </div>
     </div>
   )
 }

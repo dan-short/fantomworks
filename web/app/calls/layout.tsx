@@ -1,8 +1,7 @@
-import Link from 'next/link'
 import { isSupabaseConfigured } from '@/lib/supabase/config'
 import { createClient } from '@/lib/supabase/server'
 import { countByStatus } from '@/lib/data'
-import { STATUS_VIEWS } from '@/lib/types'
+import { NavTabs } from '@/components/NavTabs'
 import { signOut } from '../login/actions'
 
 export default async function CallsLayout({ children }: { children: React.ReactNode }) {
@@ -18,14 +17,14 @@ export default async function CallsLayout({ children }: { children: React.ReactN
   }
 
   return (
-    <div className="min-h-dvh bg-neutral-950 text-neutral-100">
+    <div className="flex h-dvh flex-col bg-neutral-950 text-neutral-100">
       {!isSupabaseConfigured && (
-        <div className="bg-amber-500/15 text-amber-300 text-xs px-4 py-1.5 text-center border-b border-amber-500/20">
+        <div className="shrink-0 bg-amber-500/15 text-amber-300 text-xs px-4 py-1.5 text-center border-b border-amber-500/20">
           Dev mode — running on seed data. Set Supabase env vars to connect the real database.
         </div>
       )}
 
-      <header className="border-b border-neutral-800 px-4 py-3">
+      <header className="shrink-0 border-b border-neutral-800 px-4 py-3">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <span className="font-bold tracking-tight">FantomWorks</span>
@@ -39,21 +38,10 @@ export default async function CallsLayout({ children }: { children: React.ReactN
           </div>
         </div>
 
-        <nav className="mt-3 flex flex-wrap gap-1">
-          {STATUS_VIEWS.map((v) => (
-            <Link
-              key={v.key}
-              href={`/calls?view=${v.key}`}
-              className="rounded-md px-3 py-1.5 text-sm text-neutral-300 hover:bg-neutral-800"
-            >
-              {v.label}
-              <span className="ml-1.5 text-xs text-neutral-500">{counts[v.key] ?? 0}</span>
-            </Link>
-          ))}
-        </nav>
+        <NavTabs counts={counts} />
       </header>
 
-      <main className="p-4">{children}</main>
+      <main className="flex min-h-0 flex-1 flex-col">{children}</main>
     </div>
   )
 }

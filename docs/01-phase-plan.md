@@ -16,30 +16,32 @@ Legend: ☐ todo · ◐ in progress · ☑ done
 
 ## Phase 1 — Call-log VIEWER on a new live URL (read-only, zero risk)
 The new Supabase DB holds a **copy**; the old site keeps running untouched.
-- ☐ Convert MySQL schema → Postgres (draft in `migrations/`), refine against real dump
-- ☐ Load a data snapshot into Supabase (pgloader or cleaned dump)
-- ☐ Import `ZipCodes` reference table once
-- ☐ Next.js (App Router) app — Server Components for reads, Server Actions for writes (see `docs/03-architecture.md`)
-  - call-log table with the same pipeline views (Call Log / Pending / Active / Finished / Possibles / Archives)
-  - age-based color coding, search, sort by Name/Vehicle/Received/Distance, per-row detail (incl. `Project_Desc` + images)
-- ☐ Supabase Auth via `@supabase/ssr`: **disable public sign-ups**, provision the ~5 users manually (dashboard or `auth.admin.createUser`)
-- ☐ Sign-in page (email + password); RLS policy = authenticated staff have full access (no roles table for v1)
-- ☐ Deploy to Vercel at a test URL (e.g. `calls-next.fantomworks.com` or `*.vercel.app`)
-- **Exit criteria:** Dad can view the call log on the new site and agrees it's at least as usable as today's.
-- **Known limitation:** old form still writes to the OLD db, so the copy goes stale → resync periodically until Phase 2. Keep the stale window short.
+- ☑ Convert MySQL schema → Postgres (`migrations/0001`), refined against the real dump
+- ☑ Load data into Supabase — custom converter (`scripts/convert.mjs`) + fast `COPY` load (`scripts/fast-load.sh`); 5,899 submissions + 28k detail stages
+- ☑ Import `ZipCodes` reference table (43,590 rows)
+- ☑ Next.js (App Router) app — Server Components for reads, Server Actions for writes (see `docs/03-architecture.md`)
+  - call-log table with pipeline views (Call Log / Pending / Active / Finished / Possibles / Archives)
+  - age-based color coding, search, sort by Name/Vehicle/Received/Distance, per-row detail (stages + photos)
+- ☑ Supabase Auth via `@supabase/ssr`: public sign-ups disabled, `office` user provisioned (`scripts/create-user.mjs`)
+- ☑ Sign-in page (username/email + password); RLS = authenticated staff full access (`migrations/0002`)
+- ☑ Deploy to Vercel — **live at https://fantomworks.vercel.app**
+- **Exit criteria:** ✅ Dad can view the call log on the new site.
+- **Known limitation (until Phase 2):** old form still writes to the OLD db, so the copy goes stale → resync periodically until cutover.
 
-## Phase 2 — Point form submissions at the new DB (the real cutover)
-The only delicate step — a live write path.
-- ☐ Rebuild the submission form (`submission/index.html`) against Supabase, OR keep the HTML and swap its backend to a Supabase insert / edge function
-- ☐ Port the insert logic from `calllogprocessor2.php`: distance calc, phone formatting, image upload → **Supabase Storage** (replaces `/uploads` dir), confirmation email
-- ☐ Add the Phase-1 write actions (call attempts, notes, bump, archive, status changes, delete) — needs `functions/*.php`
-- ☐ **Cutover:** dual-write for a short window (old form → both DBs) OR hard-switch during a quiet period with old DB as fallback
-- **Exit criteria:** new submissions land in Supabase; new DB is now source of truth; staleness problem gone.
+## Phase 2 — Point form submissions at the new DB (the real cutover)  📋 scoped
+The only delicate step — a live write path. **Full breakdown in [`docs/04-phase2-scope.md`](04-phase2-scope.md).**
+- ☐ Submission endpoint (repoint `submission/index.html` or rebuild in Next.js) writing to Supabase
+- ☐ Port `calllogprocessor2.php` logic: phone format, distance calc (via `zipcodes`), atomic insert of submission + 4 detail stages
+- ☐ Images → Supabase Storage (`submissions` bucket); swap viewer `UPLOADS_BASE` for signed URLs; backfill old `/uploads`
+- ☐ Confirmation email (decision: Resend vs SMTP)
+- ☐ Complete viewer write-actions to match legacy `functions/*.php` (still to pull from Bluehost)
+- ☐ **Cutover:** dual-write window (recommended) → reconcile → flip; retire `calllogprocessor2.php`
+- **Exit criteria:** new submissions land in Supabase w/ images + email, appear on the call log; new DB is source of truth.
 
 ## Phase 3 — Migrate the rest of fantomworks.com
 - ☐ Inventory remaining pages/content on the main site
 - ☐ Port off PHP; repoint apex `fantomworks.com` to the new deployment
-- ☐ Decommission GoDaddy hosting (keep or transfer the domain registration)
+- ☐ Decommission Bluehost hosting (keep or transfer the domain registration)
 - ☐ Rotate the old DB password; retire legacy `mysqli` code
 
 ---
