@@ -17,13 +17,13 @@ export function NavTabs({ counts }: { counts: Record<string, number> }) {
             aria-current={active ? 'page' : undefined}
             className={`rounded-md px-3 py-1.5 text-sm transition-colors ${
               active
-                ? 'bg-neutral-100 text-neutral-900 font-medium'
-                : 'text-neutral-300 hover:bg-neutral-800'
+                ? 'bg-stone-900 text-white font-medium'
+                : 'text-stone-600 hover:bg-stone-100'
             }`}
           >
             {v.label}
             <span
-              className={`ml-1.5 text-xs ${active ? 'text-neutral-500' : 'text-neutral-500'}`}
+              className={`tnum ml-1.5 text-xs ${active ? 'text-stone-300' : 'text-stone-400'}`}
             >
               {counts[v.key] ?? 0}
             </span>

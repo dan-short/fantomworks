@@ -34,8 +34,8 @@ export default async function CallsPage({
     <div className="flex min-h-0 flex-1 flex-col p-4">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4 shrink-0">
         <div>
-          <h1 className="text-lg font-semibold">{label}</h1>
-          <p className="text-sm text-neutral-400">
+          <h1 className="text-lg font-semibold text-stone-900">{label}</h1>
+          <p className="tnum text-sm text-stone-500">
             {submissions.length} {submissions.length === 1 ? 'submission' : 'submissions'}
           </p>
         </div>
@@ -47,15 +47,15 @@ export default async function CallsPage({
               name="q"
               defaultValue={search}
               placeholder="Search name, vehicle, city…"
-              className="rounded-md bg-neutral-900 border border-neutral-700 px-3 py-1.5 text-sm outline-none focus:border-neutral-400 w-64"
+              className="w-64 rounded-md border border-stone-300 bg-white px-3 py-1.5 text-sm text-stone-900 outline-none placeholder:text-stone-400 focus:border-stone-500 focus:ring-2 focus:ring-stone-200"
             />
-            <button className="rounded-md bg-neutral-800 px-3 py-1.5 text-sm hover:bg-neutral-700">
+            <button className="rounded-md border border-stone-300 bg-white px-3 py-1.5 text-sm text-stone-700 hover:bg-stone-100">
               Search
             </button>
           </form>
 
           <div className="flex items-center gap-1 text-sm">
-            <span className="text-neutral-500 text-xs mr-1">Sort</span>
+            <span className="mr-1 text-xs text-stone-400">Sort</span>
             {SORTS.map((s) => {
               const params = new URLSearchParams()
               params.set('view', view)
@@ -67,7 +67,7 @@ export default async function CallsPage({
                   key={s.key}
                   href={`/calls?${params.toString()}`}
                   className={`rounded px-2 py-1 ${
-                    active ? 'bg-neutral-100 text-neutral-900' : 'text-neutral-300 hover:bg-neutral-800'
+                    active ? 'bg-stone-900 text-white' : 'text-stone-600 hover:bg-stone-100'
                   }`}
                 >
                   {s.label}
