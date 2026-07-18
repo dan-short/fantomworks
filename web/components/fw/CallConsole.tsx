@@ -234,10 +234,11 @@ export function CallConsole({
   const [editing, setEditing] = React.useState<{ lead: Submission; section: EditSection } | null>(null)
 
   const [qInput, setQInput] = React.useState(search)
-  React.useEffect(() => {
+  const [prevView, setPrevView] = React.useState(view)
+  if (view !== prevView) {
+    setPrevView(view)
     setQInput(search)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view])
+  }
   React.useEffect(() => {
     const h = setTimeout(() => {
       const draft = qInput.trim()
@@ -264,13 +265,15 @@ export function CallConsole({
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  React.useEffect(() => {
+  const [prevRows, setPrevRows] = React.useState(rows)
+  if (rows !== prevRows) {
+    setPrevRows(rows)
     setSel((prev) => {
       const ids = new Set(rows.map((l) => l.id))
       const next = new Set([...prev].filter((id) => ids.has(id)))
       return next.size === prev.size ? prev : next
     })
-  }, [rows])
+  }
 
   const tabs = STATUS_VIEWS.map((v) => ({ key: v.key, label: v.label, count: counts[v.key] ?? 0 }))
   const viewLabel = STATUS_VIEWS.find((v) => v.key === view)?.label ?? view

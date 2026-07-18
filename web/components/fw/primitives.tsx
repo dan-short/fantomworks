@@ -118,9 +118,13 @@ function relAge(d: string | null): string {
   return `${Math.floor(n / 365)}y ago`
 }
 
+function daysSince(d: string | null): number | null {
+  return d ? Math.floor((Date.now() - new Date(d).getTime()) / 86_400_000) : null
+}
+
 export function ContactCue({ last }: { last: string | null }) {
   const never = !last
-  const days = last ? Math.floor((Date.now() - new Date(last).getTime()) / 86_400_000) : null
+  const days = daysSince(last)
   const warn = never || (days != null && days >= 14)
   const color = never ? 'var(--age-cold)' : warn ? 'var(--age-stale)' : 'var(--age-fresh)'
   return (
