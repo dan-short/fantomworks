@@ -52,6 +52,23 @@ export type SortKey = 'received' | 'name' | 'vehicle' | 'distance'
 
 export const PAGE_SIZE = 50
 
+// Explicit column projection: fetch only what the app models (the Submission
+// interface + the image_name_* columns folded into `images`). `select('*')`
+// also dragged along ~17 columns the UI never reads — the 9 legacy_* flags, the
+// policy-acknowledgement text blobs, arrival_date, created_at/updated_at — which
+// were fetched off the wire only to be dropped by the type cast. Narrower rows =
+// less to serialize and transfer on every page load.
+const SELECT_COLS = [
+  'id', 'legacy_id', 'source',
+  'first_name', 'last_name', 'phone', 'alt_phone', 'call_schedule', 'email',
+  'street', 'zipcode', 'city', 'state_country', 'time_zone', 'distance_miles',
+  'year', 'make', 'model', 'budget', 'project_start', 'project_description',
+  'restoration_decision_matrix', 'storage_type', 'storage_years',
+  'status', 'received_date', 'original_date', 'bumped_at', 'added_by', 'notes',
+  'call_attempt_one', 'call_attempt_two', 'call_attempt_three', 'email_attempt',
+  'image_name_1', 'image_name_2', 'image_name_3', 'image_name_4',
+].join(', ')
+
 const SEARCH_COLS = ['first_name', 'last_name', 'email', 'make', 'model', 'city'] as const
 
 // Build a safe PostgREST `.or()` value for an ILIKE contains-search.
@@ -120,12 +137,15 @@ export async function getSubmissions(
 
   if (isSupabaseConfigured) {
     const supabase = await createClient()
-    let q = supabase.from('submissions').select('*', { count: 'exact' }).eq('status', status)
+    let q = supabase.from('submissions').select(SELECT_COLS, { count: 'exact' }).eq('status', status)
     if (search) q = q.or(orIlikeFilter(search))
     q = applySort(q, sort).range(from, from + PAGE_SIZE - 1)
     const { data, error, count } = await q
     if (error) throw error
-    return { rows: (data ?? []).map(fromRow), total: count ?? 0 }
+    // A computed (non-literal) select string widens supabase-js's row type, so
+    // cast back to plain rows for fromRow.
+    const rows = (data ?? []) as unknown as Record<string, unknown>[]
+    return { rows: rows.map(fromRow), total: count ?? 0 }
   }
 
   let rows = devSubs().filter((s) => s.status === status)
@@ -143,10 +163,21 @@ export async function getSubmissions(
 export async function countByStatus(): Promise<Record<string, number>> {
   if (isSupabaseConfigured) {
     const supabase = await createClient()
-    const { data, error } = await supabase.from('submissions').select('status')
-    if (error) throw error
+    // One grouped aggregate instead of pulling every row's status and tallying
+    // in Node (see migration 0006). Falls back to the old scan if the RPC isn't
+    // deployed yet, so this ships safely ahead of the migration.
+    const { data, error } = await supabase.rpc('submissions_status_counts')
+    if (!error && Array.isArray(data)) {
+      const counts: Record<string, number> = {}
+      for (const row of data as { status: string; n: number }[]) {
+        counts[row.status] = Number(row.n)
+      }
+      return counts
+    }
+    const { data: rows, error: scanErr } = await supabase.from('submissions').select('status')
+    if (scanErr) throw scanErr
     const counts: Record<string, number> = {}
-    for (const row of data ?? []) {
+    for (const row of rows ?? []) {
       const s = (row as { status: string }).status
       counts[s] = (counts[s] ?? 0) + 1
     }
