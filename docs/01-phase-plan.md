@@ -32,7 +32,7 @@ The new Supabase DB holds a **copy**; the old site keeps running untouched.
 The only delicate step — a live write path. **Full breakdown in [`docs/04-phase2-scope.md`](04-phase2-scope.md).**
 - ◐ Submission form UIs rebuilt in Next.js — self-service `web/app/submit` and office quick-entry `web/app/calls/new` — but **UI-only stubs** (validate + preview, no persist). The write endpoint (`POST /api/submit` / server action) is not built.
 - ☐ Port `calllogprocessor2.php` logic: phone format, distance calc (via `zipcodes`), atomic insert of submission + 4 detail stages
-- ◐ Images → Supabase Storage: public `submission-photos` bucket + client upload exist (`migrations/0004`, `web/lib/photo-upload.ts`); public-vs-private (⚠️ currently world-readable) and the signed-URL swap are still open; backfill old `/uploads` pending
+- ◐ Images → Supabase Storage: bucket now **private** with staff-only reads (`migrations/0006`); viewer mints signed URLs server-side (`web/lib/data.ts`); new photos stored as bucket keys; backfill old `/uploads` still pending
 - ☐ Confirmation email (decision: Resend vs SMTP)
 - ◐ Viewer write-actions: call attempts, notes, bump, status moves, edits, and search implemented (`web/app/actions/submissions.ts`); thanks-no-thanks / generic emails + `functions/*.php` parity audit remain
 - ☐ **Cutover:** dual-write window (recommended) → reconcile → flip; retire `calllogprocessor2.php`

@@ -4,7 +4,36 @@ import { join } from 'node:path'
 import { isSupabaseConfigured } from './supabase/config'
 import { createClient } from './supabase/server'
 import { seedSubmissions, seedDetails } from './seed'
+import { PHOTO_BUCKET, resolvePhotoUrl, storageKey } from './images'
 import type { Submission, DetailStage, DetailsMap, SubmissionStatus } from './types'
+
+const SIGNED_URL_TTL = 60 * 60
+
+async function attachImageUrls(rows: Submission[]): Promise<void> {
+  const keys = new Set<string>()
+  for (const r of rows) for (const v of r.images) {
+    const k = storageKey(v)
+    if (k) keys.add(k)
+  }
+
+  const signed = new Map<string, string>()
+  if (isSupabaseConfigured && keys.size) {
+    const supabase = await createClient()
+    const list = [...keys]
+    const { data } = await supabase.storage.from(PHOTO_BUCKET).createSignedUrls(list, SIGNED_URL_TTL)
+    data?.forEach((d, i) => {
+      if (d.signedUrl) signed.set(list[i], d.signedUrl)
+    })
+  }
+
+  for (const r of rows) {
+    r.image_urls = r.images.map((v) => {
+      const k = storageKey(v)
+      if (k) return signed.get(k) ?? ''
+      return resolvePhotoUrl(v) ?? ''
+    })
+  }
+}
 
 const g = globalThis as unknown as {
   __fw_subs?: Submission[]
@@ -112,7 +141,9 @@ export async function getSubmissions(
     q = applySort(q, sort).range(from, from + PAGE_SIZE - 1)
     const { data, error, count } = await q
     if (error) throw error
-    return { rows: (data ?? []).map(fromRow), total: count ?? 0 }
+    const rows = (data ?? []).map(fromRow)
+    await attachImageUrls(rows)
+    return { rows, total: count ?? 0 }
   }
 
   let rows = devSubs().filter((s) => s.status === status)
@@ -164,7 +195,9 @@ export async function getSubmission(id: number): Promise<Submission | null> {
     const supabase = await createClient()
     const { data, error } = await supabase.from('submissions').select('*').eq('id', id).single()
     if (error) return null
-    return fromRow(data)
+    const row = fromRow(data)
+    await attachImageUrls([row])
+    return row
   }
   return devSubs().find((s) => s.id === id) ?? null
 }

@@ -24,8 +24,8 @@ import {
   yearOk,
   type TaskInput,
 } from '@/lib/form-utils'
-import { resolvePhotoUrl } from '@/lib/images'
-import { uploadPhoto, photoPublicUrl } from '@/lib/photo-upload'
+import { PHOTO_BUCKET, resolvePhotoUrl } from '@/lib/images'
+import { uploadPhoto } from '@/lib/photo-upload'
 import { updateLead, setStages, setPhotos, type StageInput } from '@/app/actions/submissions'
 
 export type EditSection = 'customer' | 'vehicle' | 'tasks' | 'history' | 'photos'
@@ -92,7 +92,7 @@ export function LeadEditDialog({
   )
 
   const [photos, setPhotoState] = React.useState<PhotoItem[]>(() =>
-    (lead.images ?? []).map((v) => ({ value: v, url: resolvePhotoUrl(v) })),
+    (lead.images ?? []).map((v, i) => ({ value: v, url: lead.image_urls?.[i] || resolvePhotoUrl(v) })),
   )
   const fileRef = React.useRef<HTMLInputElement>(null)
 
@@ -103,7 +103,7 @@ export function LeadEditDialog({
     const room = MAX_PHOTOS - photos.length
     for (const file of files.slice(0, Math.max(0, room))) {
       const up = await uploadPhoto(file)
-      const value = up.path ? photoPublicUrl(up.path) : up.previewUrl
+      const value = up.path ? `${PHOTO_BUCKET}/${up.path}` : up.previewUrl
       setPhotoState((prev) => [...prev, { value, url: up.previewUrl }].slice(0, MAX_PHOTOS))
     }
   }

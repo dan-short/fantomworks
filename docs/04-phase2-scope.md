@@ -97,16 +97,15 @@ Detail stages (form provides only these four — mirror `calllogprocessor2.php`)
 - ☐ Spam handling: legacy left obvious bot rows as `Deleted=1`. Add basic validation / honeypot / rate-limit.
 
 ### C. Images → Supabase Storage
-- ◐ Bucket exists — `migrations/0004` creates **`submission-photos`**, but **public** (public
-  read + anon insert), not the private staff-only bucket originally scoped here. Client upload
-  is wired (`web/lib/photo-upload.ts`). ⚠️ **Open decision (diverges from original scope):** keep
-  it public or make it private with signed URLs — customer photos are currently world-readable
-  by URL.
-- ☐ Upload naming: current code uses `{uuid}.{ext}` (not `{submission_id}_{n}.{ext}`, since the
-  submission isn't inserted yet); store the key/URL in `image_name_1..4` once the write path lands.
-- ◐ Viewer: `resolvePhotoUrl` (`web/lib/images.ts`) already resolves both legacy `UPLOADS_BASE`
-  filenames and full Supabase public URLs, and `next.config.ts` allowlists both hosts for the
-  `next/image` optimizer. Switch to signed URLs only if the bucket is made private.
+- ☑ Bucket is **private** — `migrations/0006` flips `submission-photos` to non-public and replaces
+  the public read policy with an authenticated-staff read policy. Client upload stays wired
+  (`web/lib/photo-upload.ts`). ⚠️ Apply `0006` together with the deploy carrying the signing code —
+  bucket-stored photos 404 in the gap between.
+- ☑ New photos are stored as the bucket key `submission-photos/{uuid}.{ext}` in `image_name_1..4`
+  (legacy `/uploads` filenames still stored bare). Still `{uuid}`, not `{submission_id}_{n}`.
+- ☑ Viewer signs on read — `web/lib/data.ts` mints short-lived signed URLs server-side (1 h TTL)
+  into `image_urls`; legacy filenames still resolve via `UPLOADS_BASE`. `next.config.ts` allowlists
+  the Storage host (`/storage/v1/object/**`) for the `next/image` optimizer.
 - ☐ (Separate task) backfill-migrate the existing `/uploads` folder from Bluehost into Storage.
 
 ### D. Confirmation email

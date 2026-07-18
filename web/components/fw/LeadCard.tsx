@@ -596,7 +596,7 @@ export function LeadCard({
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 2 }}>
               {photos.length > 0 ? (
                 photos.slice(0, 4).map((p, i) => (
-                  <PhotoTile key={i} src={resolvePhotoUrl(p)} name={p} onClick={() => onOpenPhotos(lead, i)} />
+                  <PhotoTile key={i} src={lead.image_urls?.[i] || resolvePhotoUrl(p)} name={p} onClick={() => onOpenPhotos(lead, i)} />
                 ))
               ) : (
                 <div

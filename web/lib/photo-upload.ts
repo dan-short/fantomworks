@@ -1,8 +1,9 @@
 'use client'
 import { createClient } from '@/lib/supabase/client'
 import { isSupabaseConfigured } from '@/lib/supabase/config'
+import { PHOTO_BUCKET } from '@/lib/images'
 
-export const PHOTO_BUCKET = 'submission-photos'
+export { PHOTO_BUCKET }
 
 export type UploadedPhoto = {
   name: string
@@ -34,15 +35,10 @@ export async function uploadPhoto(file: File): Promise<UploadedPhoto> {
   }
 }
 
-export function photoPublicUrl(path: string): string {
-  if (!isSupabaseConfigured) return ''
-  return createClient().storage.from(PHOTO_BUCKET).getPublicUrl(path).data.publicUrl
-}
-
 export const toDraftPhoto = (p: UploadedPhoto): DraftPhoto => ({ name: p.name, path: p.path })
 
 export const fromDraftPhoto = (p: DraftPhoto): UploadedPhoto => ({
   name: p.name,
   path: p.path,
-  previewUrl: p.path ? photoPublicUrl(p.path) : '',
+  previewUrl: '',
 })

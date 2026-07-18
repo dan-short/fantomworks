@@ -11,7 +11,7 @@ if (supabaseUrl) {
     remotePatterns.push({
       protocol: "https",
       hostname: new URL(supabaseUrl).hostname,
-      pathname: "/storage/v1/object/public/**",
+      pathname: "/storage/v1/object/**",
     });
   } catch {
   }

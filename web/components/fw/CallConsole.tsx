@@ -730,7 +730,7 @@ export function CallConsole({
             const list = photos.lead.images ?? []
             const i = photos.idx
             const name = list[i]
-            const url = name ? resolvePhotoUrl(name) : null
+            const url = photos.lead.image_urls?.[i] || (name ? resolvePhotoUrl(name) : null)
             const go = (d: number) => setPhotos((p) => (p ? { ...p, idx: (p.idx + d + list.length) % list.length } : p))
             return (
               <div>

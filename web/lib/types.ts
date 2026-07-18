@@ -50,6 +50,7 @@ export interface Submission {
   email_attempt: string | null
 
   images: string[]
+  image_urls?: string[]
 }
 
 export interface DetailStage {
