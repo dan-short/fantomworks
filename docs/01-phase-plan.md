@@ -28,13 +28,13 @@ The new Supabase DB holds a **copy**; the old site keeps running untouched.
 - **Exit criteria:** ✅ Dad can view the call log on the new site.
 - **Known limitation (until Phase 2):** old form still writes to the OLD db, so the copy goes stale → resync periodically until cutover.
 
-## Phase 2 — Point form submissions at the new DB (the real cutover)  📋 scoped
+## Phase 2 — Point form submissions at the new DB (the real cutover)  ◐ UI started, write path not begun
 The only delicate step — a live write path. **Full breakdown in [`docs/04-phase2-scope.md`](04-phase2-scope.md).**
-- ☐ Submission endpoint (repoint `submission/index.html` or rebuild in Next.js) writing to Supabase
+- ◐ Submission form UIs rebuilt in Next.js — self-service `web/app/submit` and office quick-entry `web/app/calls/new` — but **UI-only stubs** (validate + preview, no persist). The write endpoint (`POST /api/submit` / server action) is not built.
 - ☐ Port `calllogprocessor2.php` logic: phone format, distance calc (via `zipcodes`), atomic insert of submission + 4 detail stages
-- ☐ Images → Supabase Storage (`submissions` bucket); swap viewer `UPLOADS_BASE` for signed URLs; backfill old `/uploads`
+- ◐ Images → Supabase Storage: public `submission-photos` bucket + client upload exist (`migrations/0004`, `web/lib/photo-upload.ts`); public-vs-private (⚠️ currently world-readable) and the signed-URL swap are still open; backfill old `/uploads` pending
 - ☐ Confirmation email (decision: Resend vs SMTP)
-- ☐ Complete viewer write-actions to match legacy `functions/*.php` (still to pull from Bluehost)
+- ◐ Viewer write-actions: call attempts, notes, bump, status moves, edits, and search implemented (`web/app/actions/submissions.ts`); thanks-no-thanks / generic emails + `functions/*.php` parity audit remain
 - ☐ **Cutover:** dual-write window (recommended) → reconcile → flip; retire `calllogprocessor2.php`
 - **Exit criteria:** new submissions land in Supabase w/ images + email, appear on the call log; new DB is source of truth.
 

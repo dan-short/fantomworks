@@ -4,7 +4,12 @@ Goal: new customer submissions write into Supabase so the new DB becomes the **s
 truth**, ending the staleness gap. This is the first customer-facing *write* path, so it
 ships with a fallback.
 
-Status: not started. Prereq: Phase 1 (done — viewer live at fantomworks.vercel.app).
+Status: partially started (UI-first). The submission form UIs are built as Next.js pages —
+public self-service `web/app/submit` (`SelfSubmissionForm`) and office quick-entry
+`web/app/calls/new` (`OfficeSubmissionForm`) — with validation and client-side photo upload,
+but they do **not** persist yet: submit is a UI stub (thank-you / saved screen, nothing
+written). The write endpoint, confirmation email, and cutover are not started. Prereq:
+Phase 1 (done — viewer live at fantomworks.vercel.app).
 
 ---
 
@@ -30,7 +35,7 @@ submission form (rehosted or repointed)
 Next.js Route Handler / Server Action  (or Supabase Edge Function)
    ├─ validate + format phone
    ├─ compute distance_miles from zipcodes table (shop ZIP 23517)
-   ├─ upload images -> Supabase Storage bucket 'submissions'
+   ├─ upload images -> Supabase Storage bucket 'submission-photos'  (already created; see C)
    ├─ insert submissions (status='new', source='live', added_by='Online Form')
    ├─ insert submission_detail_stages (the 4 provided stages)
    └─ send confirmation email (Resend or SMTP)
@@ -75,10 +80,12 @@ Detail stages (form provides only these four — mirror `calllogprocessor2.php`)
 ## Workstreams / task breakdown
 
 ### A. Submission endpoint
-- ☐ Decide form hosting: (a) keep `submission/index.html`, repoint its `action` to the new
-  endpoint, or (b) rebuild as a Next.js page in `web/app/submit`. (Recommend (b) long-term;
-  (a) is a faster interim.)
-- ☐ Route Handler `POST /api/submit` (or Server Action) — accepts multipart, validates.
+- ☑ Form hosting decided — rebuilt as Next.js pages (option b): public self-service form
+  (`web/app/submit`, `SelfSubmissionForm`) and office quick-entry (`web/app/calls/new`,
+  `OfficeSubmissionForm`). Both are **UI-only stubs today** — they validate and preview but
+  discard on submit.
+- ☐ Route Handler `POST /api/submit` (or Server Action) — accepts multipart, validates. **Not
+  built** — no `route.ts` / submit action exists yet, so the forms have nowhere to persist.
 - ☐ Insert uses the **service role** server-side (submissions come from the public, not an
   authenticated staff user) — endpoint must be carefully scoped (rate-limit, validate, no
   arbitrary columns) since it writes with elevated privileges.
@@ -90,9 +97,16 @@ Detail stages (form provides only these four — mirror `calllogprocessor2.php`)
 - ☐ Spam handling: legacy left obvious bot rows as `Deleted=1`. Add basic validation / honeypot / rate-limit.
 
 ### C. Images → Supabase Storage
-- ☐ Create private `submissions` bucket; policy so only authenticated staff can read.
-- ☐ Upload as `{submission_id}_{n}.{ext}`; store the key in `image_name_1..4`.
-- ☐ Viewer: swap `UPLOADS_BASE` for Storage signed URLs (component already centralizes this).
+- ◐ Bucket exists — `migrations/0004` creates **`submission-photos`**, but **public** (public
+  read + anon insert), not the private staff-only bucket originally scoped here. Client upload
+  is wired (`web/lib/photo-upload.ts`). ⚠️ **Open decision (diverges from original scope):** keep
+  it public or make it private with signed URLs — customer photos are currently world-readable
+  by URL.
+- ☐ Upload naming: current code uses `{uuid}.{ext}` (not `{submission_id}_{n}.{ext}`, since the
+  submission isn't inserted yet); store the key/URL in `image_name_1..4` once the write path lands.
+- ◐ Viewer: `resolvePhotoUrl` (`web/lib/images.ts`) already resolves both legacy `UPLOADS_BASE`
+  filenames and full Supabase public URLs, and `next.config.ts` allowlists both hosts for the
+  `next/image` optimizer. Switch to signed URLs only if the bucket is made private.
 - ☐ (Separate task) backfill-migrate the existing `/uploads` folder from Bluehost into Storage.
 
 ### D. Confirmation email
@@ -101,10 +115,11 @@ Detail stages (form provides only these four — mirror `calllogprocessor2.php`)
 - ☐ From `fwmail@fantomworks.com`, reply-to `webmaster@fantomworks.com` (verify domain in the email provider).
 
 ### E. Complete the viewer write-actions
-- ☐ Audit the `functions/*.php` (still need to pull these from Bluehost) so the new viewer matches
-  every legacy action: call attempts, notes, bump, archive, pending/confirmed/office, thanks-no-thanks,
-  generic/pass emails, master search.
-- ☐ Confirm each write persists to Supabase and RLS allows it for authenticated staff.
+- ◐ Implemented and persisting (`web/app/actions/submissions.ts`, RLS for authenticated staff):
+  call attempts, email attempt, notes, bump, status moves (pending / active / possible / finished
+  / archive / delete), lead field edits, detail stages, photo assignment, and search.
+- ☐ Still missing vs legacy: thanks-no-thanks and generic/pass **emails**, plus a parity audit
+  against `functions/*.php` (still to pull from Bluehost) for anything else (e.g. master search).
 
 ### F. Cutover
 - ☐ **Strategy decision:** dual-write window (old form → both DBs) vs hard switch with old DB fallback.
