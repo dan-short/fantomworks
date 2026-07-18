@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import Image from 'next/image'
 import { FileText } from 'lucide-react'
 import {
   Dialog,
@@ -39,8 +40,7 @@ export function ImageGallery({ images, customer }: { images: string[]; customer:
               title={`View photo ${i + 1} of ${images.length}`}
             >
               {isImageFile(img) ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={url} alt={`Photo ${i + 1}`} loading="lazy" className="h-full w-full object-cover" />
+                <Image src={url} alt={`Photo ${i + 1}`} fill sizes="56px" className="object-cover" />
               ) : (
                 <span className="grid h-full w-full place-items-center bg-stone-100 text-[10px] font-medium text-stone-500">
                   <FileText className="mb-0.5 h-4 w-4" />
@@ -65,11 +65,14 @@ export function ImageGallery({ images, customer }: { images: string[]; customer:
                 return (
                   <CarouselItem key={img} className="flex flex-col items-center justify-center">
                     {isImageFile(img) ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
+                      <Image
                         src={url}
                         alt={`Photo ${i + 1}`}
+                        width={1200}
+                        height={900}
+                        sizes="(max-width: 768px) 100vw, 768px"
                         className="max-h-[70vh] w-auto rounded-md object-contain"
+                        style={{ width: 'auto', height: 'auto' }}
                       />
                     ) : (
                       <a

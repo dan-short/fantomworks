@@ -1,5 +1,6 @@
 'use client'
 import * as React from 'react'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import {
   Search,
@@ -746,8 +747,14 @@ export function CallConsole({
                   }}
                 >
                   {url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={url} alt={name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                    <Image
+                      src={url}
+                      alt={name}
+                      fill
+                      sizes="640px"
+                      unoptimized={/^(blob:|data:)/.test(url)}
+                      style={{ objectFit: 'contain' }}
+                    />
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
                       <Camera size={30} />

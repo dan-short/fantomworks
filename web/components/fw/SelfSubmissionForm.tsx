@@ -1,5 +1,6 @@
 'use client'
 import * as React from 'react'
+import Image from 'next/image'
 import {
   Phone,
   Car,
@@ -1384,11 +1385,13 @@ export function SelfSubmissionForm() {
                       }}
                     >
                       {p.previewUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
+                        <Image
                           src={p.previewUrl}
                           alt={p.name}
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          fill
+                          sizes="96px"
+                          unoptimized={/^(blob:|data:)/.test(p.previewUrl)}
+                          style={{ objectFit: 'cover' }}
                         />
                       ) : (
                         <Camera size={18} />
