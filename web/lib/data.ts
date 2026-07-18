@@ -140,16 +140,34 @@ export async function getSubmissions(
   return { rows: rows.slice(from, from + PAGE_SIZE), total: rows.length }
 }
 
+const ALL_STATUSES: SubmissionStatus[] = [
+  'new',
+  'pending',
+  'active',
+  'finished',
+  'possible',
+  'archived',
+  'deleted',
+]
+
+// Pipeline-tab counts. One head-only `count(*)` per status (index-backed by
+// submissions_status_received_idx) instead of transferring every row's status
+// across the wire just to tally in JS. Runs the 7 counts in parallel.
 export async function countByStatus(): Promise<Record<string, number>> {
   if (isSupabaseConfigured) {
     const supabase = await createClient()
-    const { data, error } = await supabase.from('submissions').select('status')
-    if (error) throw error
+    const entries = await Promise.all(
+      ALL_STATUSES.map(async (status) => {
+        const { count, error } = await supabase
+          .from('submissions')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', status)
+        if (error) throw error
+        return [status, count ?? 0] as const
+      }),
+    )
     const counts: Record<string, number> = {}
-    for (const row of data ?? []) {
-      const s = (row as { status: string }).status
-      counts[s] = (counts[s] ?? 0) + 1
-    }
+    for (const [status, n] of entries) if (n > 0) counts[status] = n
     return counts
   }
   const counts: Record<string, number> = {}
