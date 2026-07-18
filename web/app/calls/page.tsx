@@ -15,8 +15,6 @@ export default async function CallsPage({
   const search = sp.q ?? ''
   const page = Math.max(1, Number(sp.p) || 1)
 
-  // Server owns filtering / ordering / paging (SQL-safe, scalable); live counts
-  // drive the pipeline tabs. Details are batched for the current page of rows.
   const [{ rows, total }, counts] = await Promise.all([
     getSubmissions(view, { sort, search, page }),
     countByStatus(),

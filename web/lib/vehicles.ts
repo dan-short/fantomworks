@@ -1,6 +1,3 @@
-// Curated classic-era make → model list for the FantomWorks self-submission form.
-// Focused on pre-1973 American + common import classics the shop actually works on.
-// Free-text is always allowed; this only powers the datalist type-ahead suggestions.
 export const VEHICLES: Record<string, string[]> = {
   AMC: ['AMX', 'Ambassador', 'Javelin', 'Rambler', 'Rebel'],
   Buick: ['Electra', 'Gran Sport', 'LeSabre', 'Riviera', 'Skylark', 'Wildcat'],

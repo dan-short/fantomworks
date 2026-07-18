@@ -1,6 +1,3 @@
-// Domain types — mirror migrations/0001_initial_schema.sql.
-// Refine once the real phpMyAdmin export lands.
-
 export type SubmissionStatus =
   | 'new'
   | 'pending'
@@ -37,14 +34,13 @@ export interface Submission {
   project_description: string | null
   restoration_decision_matrix: string | null
 
-  // Vehicle storage condition (most recent) + years in that condition.
   storage_type: string | null
   storage_years: number | null
 
   status: SubmissionStatus
-  received_date: string | null // ISO date; null when legacy sentinel
+  received_date: string | null
   original_date: string | null
-  bumped_at: string | null // set by "bump to top"; orders above received_date
+  bumped_at: string | null
   added_by: string | null
   notes: string | null
 
@@ -53,10 +49,9 @@ export interface Submission {
   call_attempt_three: string | null
   email_attempt: string | null
 
-  images: string[] // storage paths / filenames, up to 4
+  images: string[]
 }
 
-// One row per non-empty stage of the legacy Project_Desc breakdown.
 export interface DetailStage {
   key: string
   label: string
@@ -68,7 +63,6 @@ export interface DetailStage {
 
 export type DetailsMap = Record<number, DetailStage[]>
 
-// Pipeline views, mirrored from the legacy PHP pages.
 export const STATUS_VIEWS: {
   key: SubmissionStatus
   label: string

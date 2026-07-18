@@ -1,14 +1,4 @@
 'use client'
-// CallConsole — the FantomWorks "Shop Work Order" Call Log console.
-//
-// One client component owns the interactive shell: steel header, pipeline nav,
-// toolbar, sticky sub-bar, the lead-card list, dialogs, pager and bulk bar.
-//
-// Data flow: pipeline tabs, search, sort and pagination are URL-driven so the
-// hardened server data layer (lib/data.ts) does the filtering / ordering /
-// paging (SQL-safe, scalable). Density / night-shift / selection / dialogs are
-// pure client state — App Router soft-navigations preserve it. Mutations persist
-// through the same server actions the old table used (revalidatePath refreshes).
 import * as React from 'react'
 import { useRouter } from 'next/navigation'
 import {
@@ -35,8 +25,6 @@ import { LeadCard, type LeadActionKey } from './LeadCard'
 import { LeadEditDialog, type EditSection } from './LeadEditDialog'
 import { PipelineNav, FwButton, FwDialog } from './primitives'
 
-// The server assigns each sort field a fixed natural direction (see applySort in
-// lib/data.ts); we surface that as a human phrase rather than an asc/desc toggle.
 const SORT_FIELDS: { k: SortKey; label: string; phrase: string }[] = [
   { k: 'received', label: 'Received', phrase: 'Newest first' },
   { k: 'name', label: 'Name', phrase: 'A → Z' },
@@ -54,7 +42,6 @@ function buildUrl(opts: { view: string; sort?: SortKey; q?: string; p?: number }
   return `/calls?${params.toString()}`
 }
 
-/* ── Filters popover — pick the sort field (direction is server-defined) ── */
 function FiltersPopover({
   sort,
   onPick,
@@ -142,7 +129,6 @@ function FiltersPopover({
   )
 }
 
-/* ── Search field — steel-header porcelain input with icon + clear ── */
 function SearchField({ value, onChange, onClear }: { value: string; onChange: (v: string) => void; onClear: () => void }) {
   const [focus, setFocus] = React.useState(false)
   return (
@@ -230,13 +216,11 @@ export function CallConsole({
   const router = useRouter()
   const [pending, startTransition] = React.useTransition()
 
-  // URL-driven (server) — navigate to change.
   const nav = React.useCallback(
     (url: string) => startTransition(() => router.push(url)),
     [router],
   )
 
-  // Client-only UI state (preserved across soft navigations).
   const [filtersOpen, setFiltersOpen] = React.useState(false)
   const [night, setNight] = React.useState(false)
   const [density, setDensity] = React.useState<'comfortable' | 'compact'>('comfortable')
@@ -248,7 +232,6 @@ export function CallConsole({
   const [editMode, setEditMode] = React.useState(false)
   const [editing, setEditing] = React.useState<{ lead: Submission; section: EditSection } | null>(null)
 
-  // Search box: local draft that debounces into the URL. Reset when the view changes.
   const [qInput, setQInput] = React.useState(search)
   React.useEffect(() => {
     setQInput(search)
@@ -268,7 +251,6 @@ export function CallConsole({
     startTransition(() => void fn())
   }
 
-  // Keyboard: "/" focuses search (unless already typing in a field).
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const tag = (document.activeElement as HTMLElement | null)?.tagName
@@ -281,7 +263,6 @@ export function CallConsole({
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  // Drop selections that leave the current page/view.
   React.useEffect(() => {
     setSel((prev) => {
       const ids = new Set(rows.map((l) => l.id))
@@ -369,7 +350,6 @@ export function CallConsole({
         </div>
       )}
 
-      {/* ── Header ── */}
       <header style={{ position: 'sticky', top: 0, zIndex: 20, background: 'var(--steel)', boxShadow: 'var(--shadow-md)' }}>
         <div style={{ padding: '12px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -495,7 +475,6 @@ export function CallConsole({
           </div>
         </div>
 
-        {/* Row 2: tabs + toolbar */}
         <div style={{ padding: '0 22px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
           <div
             style={
@@ -581,7 +560,6 @@ export function CallConsole({
           </div>
         </div>
 
-        {/* Sticky sub-bar: view title + sort indicator + column headers */}
         <div style={{ background: 'var(--bg-app)', borderTop: '1px solid var(--border-hairline)', boxShadow: 'var(--shadow-xs)', padding: '11px 22px 9px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
@@ -617,7 +595,6 @@ export function CallConsole({
         </div>
       </header>
 
-      {/* ── Body ── */}
       <main className="app-scroll" style={{ flex: 1, padding: '14px 22px 40px', width: '100%', opacity: pending ? 0.6 : 1, transition: 'opacity .12s ease' }}>
         {rows.length > 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: density === 'compact' ? 7 : 12 }}>
@@ -664,7 +641,6 @@ export function CallConsole({
           </div>
         )}
 
-        {/* Pager */}
         {pageCount > 1 && (
           <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 16 }}>
             <span className="tnum fw-label" style={{ letterSpacing: '.08em' }}>
@@ -682,7 +658,6 @@ export function CallConsole({
         )}
       </main>
 
-      {/* ── Per-section edit dialog ── */}
       {editing && (
         <LeadEditDialog
           lead={editing.lead}
@@ -692,7 +667,6 @@ export function CallConsole({
         />
       )}
 
-      {/* ── Add-note dialog ── */}
       <FwDialog
         open={!!noteFor}
         onClose={() => setNoteFor(null)}
@@ -741,7 +715,6 @@ export function CallConsole({
         )}
       </FwDialog>
 
-      {/* ── Photo lightbox ── */}
       <FwDialog
         open={!!photos}
         onClose={() => setPhotos(null)}
@@ -810,7 +783,6 @@ export function CallConsole({
           })()}
       </FwDialog>
 
-      {/* ── Confirm dialog (archive / delete, single + bulk) ── */}
       <FwDialog
         open={!!confirming}
         onClose={() => setConfirming(null)}
@@ -837,7 +809,6 @@ export function CallConsole({
         <p style={{ margin: 0, fontSize: 13, lineHeight: 1.55, color: 'var(--ink-2)' }}>{confirming?.message}</p>
       </FwDialog>
 
-      {/* ── Bulk-action bar ── */}
       {sel.size > 0 && (
         <div
           style={{

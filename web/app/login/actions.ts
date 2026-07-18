@@ -8,13 +8,11 @@ export type LoginState = { error?: string }
 
 export async function signIn(_prev: LoginState, formData: FormData): Promise<LoginState> {
   if (!isSupabaseConfigured) {
-    // Dev mode: no auth backend yet.
     redirect('/calls')
   }
 
   const raw = String(formData.get('email') ?? '').trim()
   const password = String(formData.get('password') ?? '')
-  // Allow a bare username (e.g. "office") — map to the shop email domain.
   const email = raw.includes('@') ? raw : `${raw}@fantomworks.com`
 
   const supabase = await createClient()

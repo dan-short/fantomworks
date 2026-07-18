@@ -1,7 +1,3 @@
-// Shared, framework-free helpers + constants for the submission forms and the
-// Call Log edit modals. Kept JSX-free so both server and client modules can use
-// them; the React field components live in components/fw/form-fields.tsx.
-
 export const onlyDigits = (v: string) => (v || '').replace(/\D/g, '')
 
 export const formatPhone = (v: string) => {
@@ -22,7 +18,6 @@ export const numOk = (v: string) => {
   const n = (v || '').replace(/[$,\s]/g, '')
   return n !== '' && /^\d+(\.\d+)?$/.test(n)
 }
-// Parse a "$1,200"/"3200" style string to a number, or null when blank/invalid.
 export const parseNum = (v: string): number | null => {
   const n = (v || '').replace(/[$,\s]/g, '')
   return n !== '' && /^\d+(\.\d+)?$/.test(n) ? Number(n) : null
@@ -38,12 +33,10 @@ export const yearOk = (v: string) => {
   return n !== null && n > 1850 && n < 2026
 }
 
-// History / description word cap (shared across forms + edit modal).
 export const MAX_HISTORY_WORDS = 300
 export const countWords = (v: string) => (v.trim() ? v.trim().split(/\s+/).length : 0)
-// Clamp text to at most `max` words, preserving trailing whitespace while typing.
 export const clampWords = (v: string, max = MAX_HISTORY_WORDS) => {
-  const words = v.split(/(\s+)/) // keep separators
+  const words = v.split(/(\s+)/)
   let count = 0
   let out = ''
   for (const tok of words) {
@@ -58,7 +51,6 @@ export const clampWords = (v: string, max = MAX_HISTORY_WORDS) => {
   return out
 }
 
-// Vehicle storage conditions (most recent). "Other" allows free text.
 export const STORAGE_OPTIONS = [
   'Indoor — climate-controlled',
   'Indoor — unheated garage / barn',
@@ -70,8 +62,6 @@ export const STORAGE_OPTIONS = [
   'Other',
 ] as const
 
-// Task input shape shared by the self-submit Tasks step and the Call Log Tasks
-// editor (strings while editing; parsed to numbers on save).
 export type TaskInput = { topic: string; desc: string; parts: string; hours: string }
 export const emptyTask = (): TaskInput => ({ topic: '', desc: '', parts: '', hours: '' })
 export const taskEmpty = (t: TaskInput) =>
@@ -79,7 +69,6 @@ export const taskEmpty = (t: TaskInput) =>
 export const taskComplete = (t: TaskInput) =>
   Boolean(t.topic && t.desc.trim() && numOk(t.parts) && numOk(t.hours))
 
-// Task areas (shared by the self-submit Tasks step and the Call Log Tasks editor).
 export const TASK_AREAS = [
   'Mechanical',
   'Body work',

@@ -6,9 +6,6 @@ import { createClient } from './supabase/server'
 import { seedSubmissions, seedDetails } from './seed'
 import type { Submission, DetailStage, DetailsMap, SubmissionStatus } from './types'
 
-// Dev store: prefer the converted real dump (web/lib/real-data.json, produced by
-// scripts/convert.mjs) and fall back to the small seed. Loaded once via fs so the
-// 18MB JSON is never bundled into the client. globalThis survives HMR.
 const g = globalThis as unknown as {
   __fw_subs?: Submission[]
   __fw_details?: DetailsMap
@@ -39,8 +36,6 @@ function devDetails(): DetailsMap {
   return g.__fw_details!
 }
 
-// Supabase rows store images as image_name_1..4 columns; the app wants an array.
-// Also guarantees `images` is never undefined regardless of source.
 function fromRow(row: Record<string, unknown>): Submission {
   const images = [row.image_name_1, row.image_name_2, row.image_name_3, row.image_name_4].filter(
     (v): v is string => typeof v === 'string' && v.length > 0,
@@ -54,17 +49,12 @@ export const PAGE_SIZE = 50
 
 const SEARCH_COLS = ['first_name', 'last_name', 'email', 'make', 'model', 'city'] as const
 
-// Build a safe PostgREST `.or()` value for an ILIKE contains-search.
-//  1. Neutralize LIKE metacharacters (\ % _) so the term matches literally.
-//  2. Quote + escape for PostgREST's or() grammar, so commas / parentheses in
-//     the search string can't break out of the filter or inject extra clauses.
 function orIlikeFilter(term: string): string {
   const likeSafe = term.replace(/[\\%_]/g, (m) => `\\${m}`)
   const quoted = `%${likeSafe}%`.replace(/["\\]/g, (m) => `\\${m}`)
   return SEARCH_COLS.map((c) => `${c}.ilike."${quoted}"`).join(',')
 }
 
-// Dev-store equivalent of the DB ordering (see the `.order()` chain below).
 function sortSubs(rows: Submission[], sort: SortKey): Submission[] {
   const r = [...rows]
   switch (sort) {
@@ -75,7 +65,6 @@ function sortSubs(rows: Submission[], sort: SortKey): Submission[] {
     case 'distance':
       return r.sort((a, b) => (b.distance_miles ?? 0) - (a.distance_miles ?? 0))
     default:
-      // bumped rows first (most recent bump on top), then by real received_date
       return r.sort(
         (a, b) =>
           (b.bumped_at ?? '').localeCompare(a.bumped_at ?? '') ||
@@ -84,8 +73,6 @@ function sortSubs(rows: Submission[], sort: SortKey): Submission[] {
   }
 }
 
-// Push the sort into the query so pagination returns the right page (sorting
-// only the current page in JS would be wrong).
 function applySort<T extends { order: (col: string, o?: { ascending?: boolean; nullsFirst?: boolean }) => T }>(
   q: T,
   sort: SortKey,
@@ -150,9 +137,6 @@ const ALL_STATUSES: SubmissionStatus[] = [
   'deleted',
 ]
 
-// Pipeline-tab counts. One head-only `count(*)` per status (index-backed by
-// submissions_status_received_idx) instead of transferring every row's status
-// across the wire just to tally in JS. Runs the 7 counts in parallel.
 export async function countByStatus(): Promise<Record<string, number>> {
   if (isSupabaseConfigured) {
     const supabase = await createClient()
@@ -185,7 +169,6 @@ export async function getSubmission(id: number): Promise<Submission | null> {
   return devSubs().find((s) => s.id === id) ?? null
 }
 
-// DB columns are stage_key / stage_label; the app type uses key / label.
 function toDetailStage(row: Record<string, unknown>): DetailStage {
   return {
     key: (row.stage_key ?? row.key) as string,
@@ -211,8 +194,6 @@ export async function getDetailStages(id: number): Promise<DetailStage[]> {
   return devDetails()[id] ?? []
 }
 
-// Batched fetch for a page of submissions — one round-trip instead of one per
-// row (the old N+1). Returns a map keyed by submission id.
 export async function getDetailStagesFor(ids: number[]): Promise<DetailsMap> {
   if (ids.length === 0) return {}
   if (isSupabaseConfigured) {
@@ -236,7 +217,6 @@ export async function getDetailStagesFor(ids: number[]): Promise<DetailsMap> {
   return map
 }
 
-// dev-mode mutators (used by server actions when Supabase isn't configured)
 export const devStore = {
   update(id: number, patch: Partial<Submission>) {
     const row = devSubs().find((s) => s.id === id)

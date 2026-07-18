@@ -1,9 +1,4 @@
 'use client'
-// LeadEditDialog — the Call Log's per-section editor. In edit mode, clicking a
-// section of a LeadCard opens this focused modal, reusing the same "Shop Work
-// Order" field components as the public self-submission form. Saves persist
-// through server actions (updateLead / setStages / setPhotos), which revalidate
-// /calls so the card refreshes.
 import * as React from 'react'
 import { Camera, Trash, Plus } from 'lucide-react'
 import type { Submission, DetailStage } from '@/lib/types'
@@ -60,7 +55,6 @@ export function LeadEditDialog({
 }) {
   const [saving, setSaving] = React.useState(false)
 
-  // ── Customer ──
   const [cust, setCust] = React.useState(() => ({
     first_name: lead.first_name ?? '',
     last_name: lead.last_name ?? '',
@@ -73,7 +67,6 @@ export function LeadEditDialog({
     zipcode: lead.zipcode ?? '',
   }))
 
-  // ── Vehicle ──
   const [veh, setVeh] = React.useState(() => ({
     year: lead.year ?? '',
     make: lead.make ?? '',
@@ -84,10 +77,8 @@ export function LeadEditDialog({
     storageYears: lead.storage_years != null ? String(lead.storage_years) : '',
   }))
 
-  // ── History ──
   const [history, setHistory] = React.useState(lead.project_description ?? '')
 
-  // ── Tasks ──
   const [tasks, setTasks] = React.useState<TaskInput[]>(() =>
     stages.length
       ? stages.map((s) => ({
@@ -99,7 +90,6 @@ export function LeadEditDialog({
       : [{ topic: '', desc: '', parts: '', hours: '' }],
   )
 
-  // ── Photos ──
   const [photos, setPhotoState] = React.useState<PhotoItem[]>(() =>
     (lead.images ?? []).map((v) => ({ value: v, url: resolvePhotoUrl(v) })),
   )
@@ -112,8 +102,6 @@ export function LeadEditDialog({
     const room = MAX_PHOTOS - photos.length
     for (const file of files.slice(0, Math.max(0, room))) {
       const up = await uploadPhoto(file)
-      // Persisted value: a real Storage public URL when uploaded, else the blob
-      // preview (dev/seed only — won't survive a reload, but keeps the UI honest).
       const value = up.path ? photoPublicUrl(up.path) : up.previewUrl
       setPhotoState((prev) => [...prev, { value, url: up.previewUrl }].slice(0, MAX_PHOTOS))
     }
@@ -125,7 +113,6 @@ export function LeadEditDialog({
       return prev.filter((_, j) => j !== i)
     })
 
-  // ── Validation gates ──
   const custValid =
     !!cust.first_name.trim() &&
     !!cust.last_name.trim() &&

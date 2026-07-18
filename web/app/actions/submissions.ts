@@ -16,9 +16,6 @@ async function apply(id: number, patch: Record<string, unknown>) {
   revalidatePath('/calls')
 }
 
-// ── Editing from the Call Log ──────────────────────────────────────────────
-// Whitelisted scalar columns the edit modals may write. Keeps arbitrary keys
-// (status, legacy flags, ids) out of a client-supplied patch.
 const EDITABLE_COLS = new Set([
   'first_name',
   'last_name',
@@ -39,7 +36,6 @@ const EDITABLE_COLS = new Set([
   'storage_years',
 ])
 
-// Generic field update for the Customer / Vehicle / History / Storage modals.
 export async function updateLead(id: number, patch: Record<string, unknown>) {
   const clean: Record<string, unknown> = {}
   for (const [k, v] of Object.entries(patch)) if (EDITABLE_COLS.has(k)) clean[k] = v
@@ -60,7 +56,6 @@ const slug = (s: string) =>
     .replace(/[^a-z0-9]+/g, '_')
     .replace(/^_+|_+$/g, '')
 
-// Replace a lead's whole task/stage breakdown (Tasks modal).
 export async function setStages(id: number, stages: StageInput[]) {
   const rows = stages
     .filter((s) => (s.label && s.label.trim()) || (s.description && s.description.trim()))
@@ -99,8 +94,6 @@ export async function setStages(id: number, stages: StageInput[]) {
   revalidatePath('/calls')
 }
 
-// Set a lead's photos (Photos modal). Values are storage/public URLs or legacy
-// filenames; capped at 4 to match the image_name_1..4 columns.
 export async function setPhotos(id: number, images: string[]) {
   const imgs = images.filter((s) => typeof s === 'string' && s.length > 0).slice(0, 4)
   if (isSupabaseConfigured) {
@@ -131,7 +124,6 @@ export async function setStatus(id: number, status: SubmissionStatus) {
 }
 
 export async function addNote(id: number, note: string) {
-  // append rather than overwrite
   const supabase = isSupabaseConfigured ? await createClient() : null
   if (supabase) {
     const { data } = await supabase.from('submissions').select('notes').eq('id', id).single()
@@ -142,8 +134,6 @@ export async function addNote(id: number, note: string) {
   }
 }
 
-// Bump-to-top: stamp bumped_at so the row sorts above the rest of the view
-// without touching received_date (which drives the real age coloring).
 export async function bump(id: number) {
   await apply(id, { bumped_at: new Date().toISOString() })
 }

@@ -5,7 +5,7 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Warm-white office surface, ink foreground. Always light. */ /* stone-50 */ /* stone-900 */ --background: oklch(1 0 0); --foreground: oklch(0.145 0 0); --card: oklch(1 0 0); --card-foreground: oklch(0.145 0 0); --popover: oklch(1 0 0); --popover-foreground: oklch(0.145 0 0); --primary: oklch(0.205 0 0); --primary-foreground: oklch(0.985 0 0); --secondary: oklch(0.97 0 0); --secondary-foreground: oklch(0.205 0 0); --muted: oklch(0.97 0 0); --muted-foreground: oklch(0.556 0 0); --accent: oklch(0.97 0 0); --accent-foreground: oklch(0.205 0 0); --destructive: oklch(0.577 0.245 27.325); --border: oklch(0.922 0 0); --input: oklch(0.922 0 0); --ring: oklch(0.708 0 0); --chart-1: oklch(0.87 0 0); --chart-2: oklch(0.556 0 0); --chart-3: oklch(0.439 0 0); --chart-4: oklch(0.371 0 0); --chart-5: oklch(0.269 0 0); --radius: 0.625rem; --sidebar: oklch(0.985 0 0); --sidebar-foreground: oklch(0.145 0 0); --sidebar-primary: oklch(0.205 0 0); --sidebar-primary-foreground: oklch(0.985 0 0); --sidebar-accent: oklch(0.97 0 0); --sidebar-accent-foreground: oklch(0.205 0 0); --sidebar-border: oklch(0.922 0 0); --sidebar-ring: oklch(0.708 0 0);
+  --background: oklch(1 0 0); --foreground: oklch(0.145 0 0); --card: oklch(1 0 0); --card-foreground: oklch(0.145 0 0); --popover: oklch(1 0 0); --popover-foreground: oklch(0.145 0 0); --primary: oklch(0.205 0 0); --primary-foreground: oklch(0.985 0 0); --secondary: oklch(0.97 0 0); --secondary-foreground: oklch(0.205 0 0); --muted: oklch(0.97 0 0); --muted-foreground: oklch(0.556 0 0); --accent: oklch(0.97 0 0); --accent-foreground: oklch(0.205 0 0); --destructive: oklch(0.577 0.245 27.325); --border: oklch(0.922 0 0); --input: oklch(0.922 0 0); --ring: oklch(0.708 0 0); --chart-1: oklch(0.87 0 0); --chart-2: oklch(0.556 0 0); --chart-3: oklch(0.439 0 0); --chart-4: oklch(0.371 0 0); --chart-5: oklch(0.269 0 0); --radius: 0.625rem; --sidebar: oklch(0.985 0 0); --sidebar-foreground: oklch(0.145 0 0); --sidebar-primary: oklch(0.205 0 0); --sidebar-primary-foreground: oklch(0.985 0 0); --sidebar-accent: oklch(0.97 0 0); --sidebar-accent-foreground: oklch(0.205 0 0); --sidebar-border: oklch(0.922 0 0); --sidebar-ring: oklch(0.708 0 0);
 }
 
 @theme inline {
@@ -56,7 +56,6 @@ body {
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
 
-/* Tabular, aligned numbers for the data columns (phones, distances, dates). */
 .tnum {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
@@ -77,20 +76,11 @@ body {
   }
 }
 
-/* ─────────────────────────────────────────────────────────────────────────
-   FantomWorks "Shop Work Order" — Call Log redesign tokens.
-   Scoped under .fw so they don't collide with shadcn's global :root tokens
-   (--accent / --muted / --radius-* etc). Everything inside the Call Log
-   console lives under .fw and consumes these. The .fw.night variant is the
-   optional "night shift" dark theme.
-   ───────────────────────────────────────────────────────────────────────── */
 .fw {
-  /* Fonts (mapped to the next/font variables set on <html>) */
   --font-display: var(--font-oswald), "Arial Narrow", sans-serif;
   --font-body: var(--font-inter), system-ui, -apple-system, sans-serif;
   --font-mono: var(--font-jbmono), ui-monospace, "SFMono-Regular", Menlo, monospace;
 
-  /* Base neutrals (warm paper office) */
   --paper: #f4f1eb;
   --paper-sunk: #ede9e1;
   --surface: #ffffff;
@@ -103,25 +93,21 @@ body {
   --muted: #6b655d;
   --faint: #9a9288;
 
-  /* Brand accent — hot-rod red */
   --accent: #c1352b;
   --accent-hover: #9e2a22;
   --accent-press: #86211a;
   --accent-tint: #fbedeb;
   --accent-ink: #ffffff;
 
-  /* Structural steel — graphite blue */
   --steel: #3f4a55;
   --steel-2: #4b5763;
   --steel-ink: #e8ebee;
 
-  /* Lead-age heat scale (row spine + dot) */
   --age-fresh: #0e9f6e;
   --age-aging: #d9a404;
   --age-stale: #ea580c;
   --age-cold: #dc2626;
 
-  /* Pipeline status scale (chips + tabs) — separate hue family */
   --status-new: #3f4a55;
   --status-pending: #b45309;
   --status-active: #15803d;
@@ -129,7 +115,6 @@ body {
   --status-finished: #64748b;
   --status-archived: #8b8378;
 
-  /* Semantic aliases (consumed by components) */
   --bg-app: var(--paper);
   --bg-sunk: var(--paper-sunk);
   --surface-card: var(--surface);
@@ -143,7 +128,6 @@ body {
   --text-on-accent: var(--accent-ink);
   --focus-ring: color-mix(in oklch, var(--accent) 45%, transparent);
 
-  /* Radii — machined, moderately tight */
   --radius-xs: 3px;
   --radius-sm: 5px;
   --radius-md: 7px;
@@ -151,21 +135,17 @@ body {
   --radius-xl: 14px;
   --radius-full: 999px;
 
-  /* Border widths */
   --bw-spine: 4px;
 
-  /* Shadows — warm-tinted, tactile */
   --shadow-xs: 0 1px 0 rgba(33, 30, 27, 0.04);
   --shadow-sm: 0 1px 2px rgba(33, 30, 27, 0.06), 0 1px 1px rgba(33, 30, 27, 0.04);
   --shadow-md: 0 2px 6px rgba(33, 30, 27, 0.08), 0 1px 2px rgba(33, 30, 27, 0.05);
   --shadow-lg: 0 8px 24px rgba(33, 30, 27, 0.12), 0 2px 6px rgba(33, 30, 27, 0.06);
   --shadow-inset: inset 0 1px 2px rgba(33, 30, 27, 0.06);
 
-  /* Blueprint / paper texture */
   --grid-line: rgba(63, 74, 85, 0.05);
   --grid-size: 24px;
 
-  /* Signage label treatment */
   --label-size: 10px;
   --label-tracking: 0.14em;
   --label-weight: 600;
@@ -179,7 +159,6 @@ body {
   background-size: var(--grid-size) var(--grid-size);
 }
 
-/* Night shift (optional dark theme) */
 .fw.night {
   --paper: #17191c;
   --paper-sunk: #131518;
@@ -205,7 +184,6 @@ body {
   --grid-line: rgba(160, 170, 185, 0.04);
 }
 
-/* Signage section label — condensed uppercase garage build-sheet header */
 .fw .fw-label {
   font-family: var(--font-display);
   font-size: var(--label-size);
@@ -215,7 +193,6 @@ body {
   color: var(--text-faint);
 }
 
-/* Add-note textarea in the FW console */
 .fw textarea.fw-ta {
   width: 100%;
   min-height: 96px;
@@ -239,13 +216,6 @@ body {
   scrollbar-color: var(--border-strong) transparent;
 }
 
-/* ─────────────────────────────────────────────────────────────────────────
-   Submission-form fields — porcelain inputs used by the Office (/calls/new)
-   and Self (/submit) submission forms. Base sizing matches the self-form
-   spec (14px / 10px 12px); `.fw-compact` tightens to the office spec
-   (13px / 9px 11px). Error state is set inline by the form components via
-   borderColor:var(--age-cold).
-   ───────────────────────────────────────────────────────────────────────── */
 .fw .fw-field {
   width: 100%;
   border: 1px solid var(--border-strong);
@@ -275,7 +245,6 @@ body {
   cursor: pointer;
 }
 
-/* Office form runs a touch denser than the public wizard. */
 .fw-compact .fw-field {
   padding: 9px 11px;
   font-size: 13px;

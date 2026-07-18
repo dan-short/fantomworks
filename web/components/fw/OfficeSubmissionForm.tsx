@@ -1,9 +1,4 @@
 'use client'
-// Office submission — staff quick-entry for a customer who phoned or walked in.
-// Single scrolling page on the "Shop Work Order" paper theme. Recreated from the
-// design-system reference (office-submission/index.html) using the shared .fw
-// tokens + FwButton/Badge primitives. UI-only for now: submit shows a success
-// screen; no lead is written yet (persistence lands in a later pass).
 import * as React from 'react'
 import { Phone, Car, Wrench, StickyNote, CircleCheck, Trash } from 'lucide-react'
 import { FwButton, Badge } from './primitives'
@@ -224,7 +219,6 @@ export function OfficeSubmissionForm() {
 
   return (
     <div className="fw fw-compact" style={root}>
-      {/* Header */}
       <header
         style={{
           position: 'sticky',
@@ -288,7 +282,6 @@ export function OfficeSubmissionForm() {
         </Badge>
       </header>
 
-      {/* Body */}
       <main
         style={{
           flex: 1,
@@ -546,7 +539,6 @@ export function OfficeSubmissionForm() {
           </div>
         </SectionCard>
 
-        {/* Action bar */}
         <div
           style={{
             position: 'sticky',

@@ -2,8 +2,6 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { supabaseUrl, supabasePublishableKey, isSupabaseConfigured } from './config'
 
-// Refreshes the auth session on every request and gates protected routes.
-// When Supabase isn't configured yet, it's a no-op so the app runs on seed data.
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
@@ -24,14 +22,11 @@ export async function updateSession(request: NextRequest) {
     },
   })
 
-  // IMPORTANT: getUser() must be called to refresh the token. Don't run logic between
-  // createServerClient and getUser, or you risk random logouts.
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
   const path = request.nextUrl.pathname
-  // /submit is the public, customer-facing project submission form — no auth.
   const isPublic =
     path.startsWith('/login') || path.startsWith('/auth') || path.startsWith('/submit')
 

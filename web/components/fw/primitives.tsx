@@ -1,11 +1,6 @@
 'use client'
-// FantomWorks "Shop Work Order" primitives — ported from the design-system
-// bundle to real React components. They render with inline styles driven by the
-// .fw CSS variables (see globals.css), so a `.fw` (and optional `.night`)
-// ancestor themes the whole subtree. No shadcn tokens are consumed here.
 import * as React from 'react'
 
-/* ── Age heat scale ──────────────────────────────────────────────────────── */
 export type AgeBucket = 'fresh' | 'aging' | 'stale' | 'cold'
 
 const AGE: Record<AgeBucket, { color: string; label: string; tip: string }> = {
@@ -58,7 +53,6 @@ export function AgeDot({ bucket, size = 10 }: { bucket: AgeBucket; size?: number
   )
 }
 
-/* ── Badge ───────────────────────────────────────────────────────────────── */
 const TONES: Record<string, string> = {
   neutral: '#6B655D',
   red: '#C1352B',
@@ -115,7 +109,6 @@ export function Badge({
   )
 }
 
-/* ── ContactCue — the cadence triage chip ────────────────────────────────── */
 function relAge(d: string | null): string {
   if (!d) return ''
   const n = Math.floor((Date.now() - new Date(d).getTime()) / 86_400_000)
@@ -154,7 +147,6 @@ export function ContactCue({ last }: { last: string | null }) {
   )
 }
 
-/* ── Button ──────────────────────────────────────────────────────────────── */
 type ButtonProps = {
   variant?: 'primary' | 'secondary' | 'ghost' | 'steel' | 'destructive'
   size?: 'sm' | 'md' | 'lg'
@@ -248,7 +240,6 @@ export function FwButton({
   )
 }
 
-/* ── Tooltip ─────────────────────────────────────────────────────────────── */
 export function FwTooltip({
   label,
   side = 'top',
@@ -303,7 +294,6 @@ export function FwTooltip({
   )
 }
 
-/* ── Dialog ──────────────────────────────────────────────────────────────── */
 export function FwDialog({
   open,
   onClose,
@@ -411,7 +401,6 @@ export function FwDialog({
   )
 }
 
-/* ── PipelineNav — stage tabs with per-stage counts ──────────────────────── */
 export type PipelineTab = { key: string; label: string; count: number }
 
 export function PipelineNav({
@@ -480,7 +469,6 @@ export function PipelineNav({
   )
 }
 
-/* ── Shared date helpers ─────────────────────────────────────────────────── */
 export function fmtDate(ts: string | null): string {
   if (!ts) return ''
   return new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: '2-digit' })

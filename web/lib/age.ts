@@ -1,8 +1,3 @@
-// Reproduces the legacy call-log age coloring based on Received_Date:
-//   < 30 days  -> green
-//   30–60 days -> yellow
-//   60–90 days -> red
-//   > 90 days  -> dark red
 export type AgeBucket = 'fresh' | 'aging' | 'stale' | 'cold'
 
 export function ageBucket(receivedDate: string | null): AgeBucket {
@@ -16,8 +11,6 @@ export function ageBucket(receivedDate: string | null): AgeBucket {
   return 'cold'
 }
 
-// Canonical per-bucket presentation — one source of truth for dot color,
-// tooltip copy, and short legend label. Used by the call-log table.
 export const AGE_META: Record<AgeBucket, { dot: string; tip: string; label: string }> = {
   fresh: { dot: 'bg-emerald-500', tip: 'Received less than 30 days ago', label: '< 30 days' },
   aging: { dot: 'bg-amber-400', tip: 'Received 30–60 days ago', label: '30–60 days' },

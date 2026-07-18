@@ -1,10 +1,4 @@
 'use client'
-// Self submission — the public, customer-facing project submission wizard.
-// Recreated from the design-system reference (self-submission/index.html) on the
-// shared "Shop Work Order" .fw theme, reusing FwButton/Badge/FwDialog. Six-step
-// wizard with live validation, a localStorage draft (save & finish later), and
-// real photo upload to Supabase Storage (dev falls back to object-URL previews).
-// UI-only submit: the success screen shows a recap; no lead is written yet.
 import * as React from 'react'
 import {
   Phone,
@@ -30,7 +24,6 @@ import {
   type DraftPhoto,
 } from '@/lib/photo-upload'
 
-/* ── Types ───────────────────────────────────────────────────────────────── */
 type Task = { topic: string; desc: string; parts: string; hours: string }
 type Form = {
   first: string
@@ -74,7 +67,6 @@ const BLANK: Form = {
 
 const emptyTask = (): Task => ({ topic: '', desc: '', parts: '', hours: '' })
 
-/* ── Validators ──────────────────────────────────────────────────────────── */
 const onlyDigits = (v: string) => (v || '').replace(/\D/g, '')
 const formatPhone = (v: string) => {
   const d = onlyDigits(v).slice(0, 10)
@@ -128,7 +120,6 @@ const STEPS: StepDef[] = [
   { key: 'review', label: 'Review', Icon: CircleCheck },
 ]
 
-/* ── Small building blocks ───────────────────────────────────────────────── */
 function Label({ children, req }: { children: React.ReactNode; req?: boolean }) {
   return (
     <label className="fw-label" style={{ display: 'block', marginBottom: 7 }}>
@@ -387,7 +378,6 @@ const headingStyle: React.CSSProperties = {
 const subStyle: React.CSSProperties = { margin: '5px 0 0', fontSize: 13, color: 'var(--muted)' }
 const monoStyle: React.CSSProperties = { fontFamily: 'var(--font-mono)' }
 
-/* ── Component ───────────────────────────────────────────────────────────── */
 export function SelfSubmissionForm() {
   const [step, setStep] = React.useState(0)
   const [maxReached, setMax] = React.useState(0)
@@ -401,7 +391,6 @@ export function SelfSubmissionForm() {
   const [photoWarn, setPhotoWarn] = React.useState(false)
   const fileRef = React.useRef<HTMLInputElement>(null)
 
-  // Read any saved draft after mount (avoids SSR/hydration mismatch on localStorage).
   React.useEffect(() => {
     try {
       const s = localStorage.getItem(DRAFT_KEY)
@@ -410,25 +399,18 @@ export function SelfSubmissionForm() {
       const photos = (
         (parsed.f?.photos as unknown as DraftPhoto[] | undefined) ?? []
       ).map(fromDraftPhoto)
-      // Client-only init: read the saved draft once on mount to show the resume
-      // banner. Kept in an effect (not a lazy initializer) so SSR and first client
-      // render agree (localStorage is unavailable on the server).
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setDraft({ ...parsed, f: { ...BLANK, ...parsed.f, photos } })
     } catch {
-      /* ignore */
     }
   }, [])
 
-  // Autosave whenever the form changes after the user has started (photos stored
-  // as serializable {name, path} — blob preview URLs can't survive a reload).
   React.useEffect(() => {
     if (!started || done) return
     try {
       const persist = { ...f, photos: f.photos.map(toDraftPhoto) }
       localStorage.setItem(DRAFT_KEY, JSON.stringify({ f: persist, step, ts: Date.now() }))
     } catch {
-      /* ignore */
     }
   }, [f, step, started, done])
 
@@ -436,7 +418,6 @@ export function SelfSubmissionForm() {
     try {
       localStorage.removeItem(DRAFT_KEY)
     } catch {
-      /* ignore */
     }
     setDraft(null)
   }
@@ -452,7 +433,6 @@ export function SelfSubmissionForm() {
       const persist = { ...f, photos: f.photos.map(toDraftPhoto) }
       localStorage.setItem(DRAFT_KEY, JSON.stringify({ f: persist, step, ts: Date.now() }))
     } catch {
-      /* ignore */
     }
     setSavedLater(true)
   }
@@ -478,14 +458,14 @@ export function SelfSubmissionForm() {
     }))
 
   const valid = [
-    Boolean(f.first && f.last && phoneOk(f.phone) && zipOk(f.zip) && f.schedule.trim()), // contact
+    Boolean(f.first && f.last && phoneOk(f.phone) && zipOk(f.zip) && f.schedule.trim()),
     Boolean(
       f.make && numOk(f.budget) && yearOk(f.year) && (f.startWhen === 'asap' || f.startCustom.trim()),
-    ), // vehicle
-    f.tasks.some(taskComplete) && f.tasks.every((t) => taskEmpty(t) || taskComplete(t)), // tasks
-    true, // history
-    true, // photos
-    true, // review
+    ),
+    f.tasks.some(taskComplete) && f.tasks.every((t) => taskEmpty(t) || taskComplete(t)),
+    true,
+    true,
+    true,
   ]
 
   const go = (n: number) => {
@@ -496,7 +476,7 @@ export function SelfSubmissionForm() {
 
   const onPickFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? [])
-    e.target.value = '' // allow re-selecting the same file
+    e.target.value = ''
     if (!files.length) return
     const room = MAX_PHOTOS - f.photos.length
     const take = files.slice(0, Math.max(0, room))
@@ -510,7 +490,6 @@ export function SelfSubmissionForm() {
       return { ...s, photos: s.photos.filter((_, j) => j !== i) }
     })
 
-  /* ── Success screen ──────────────────────────────────────────────────── */
   if (done) {
     const recap: [string, React.ReactNode][] = [
       [
@@ -614,7 +593,6 @@ export function SelfSubmissionForm() {
     )
   }
 
-  /* ── Saved-for-later screen ──────────────────────────────────────────── */
   if (savedLater) {
     return (
       <div className="fw" style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: 24 }}>
@@ -660,7 +638,6 @@ export function SelfSubmissionForm() {
     )
   }
 
-  /* ── Intro gate ──────────────────────────────────────────────────────── */
   if (!started) {
     return (
       <div className="fw" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -811,7 +788,6 @@ export function SelfSubmissionForm() {
     )
   }
 
-  /* ── Wizard ──────────────────────────────────────────────────────────── */
   return (
     <div className="fw" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <SubmitHeader
@@ -849,7 +825,6 @@ export function SelfSubmissionForm() {
             flexDirection: 'column',
           }}
         >
-          {/* CONTACT */}
           {step === 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div>
@@ -932,7 +907,6 @@ export function SelfSubmissionForm() {
             </div>
           )}
 
-          {/* VEHICLE */}
           {step === 1 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div>
@@ -1080,7 +1054,6 @@ export function SelfSubmissionForm() {
             </div>
           )}
 
-          {/* TASKS */}
           {step === 2 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
               <div>
@@ -1299,7 +1272,6 @@ export function SelfSubmissionForm() {
             </div>
           )}
 
-          {/* HISTORY */}
           {step === 3 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div>
@@ -1321,7 +1293,6 @@ export function SelfSubmissionForm() {
             </div>
           )}
 
-          {/* PHOTOS */}
           {step === 4 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div>
@@ -1451,7 +1422,6 @@ export function SelfSubmissionForm() {
             </div>
           )}
 
-          {/* REVIEW */}
           {step === 5 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div>
@@ -1557,7 +1527,6 @@ export function SelfSubmissionForm() {
           <div style={{ flex: 1 }} />
         </section>
 
-        {/* Nav */}
         <div
           style={{
             display: 'flex',
@@ -1677,7 +1646,6 @@ export function SelfSubmissionForm() {
   )
 }
 
-/* ── Shared steel header ─────────────────────────────────────────────────── */
 function SubmitHeader({
   action,
   stacked,

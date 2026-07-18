@@ -1,9 +1,6 @@
 import type { Submission, DetailStage, DetailsMap } from './types'
 import { daysAgo } from './age'
 
-// Minimal fallback used only when web/lib/real-data.json is absent
-// (i.e. before scripts/convert.mjs has run). The real dump drives dev mode.
-
 function base(over: Partial<Submission>): Submission {
   return {
     id: 0, legacy_id: 0, source: 'live',

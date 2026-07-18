@@ -13,8 +13,6 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// "Shop Work Order" typefaces for the Call Log redesign — industrial signage
-// display (Oswald), humanist body (Inter), tabular mono numbers (JetBrains Mono).
 const oswald = Oswald({
   variable: "--font-oswald",
   subsets: ["latin"],

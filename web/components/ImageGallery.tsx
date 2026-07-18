@@ -16,7 +16,6 @@ import {
 } from '@/components/ui/carousel'
 import { UPLOADS_BASE, isImageFile } from '@/lib/images'
 
-// Thumbnails that open an in-app lightbox with prev/next arrows — no leaving the site.
 export function ImageGallery({ images, customer }: { images: string[]; customer: string }) {
   const [open, setOpen] = useState(false)
   const [start, setStart] = useState(0)

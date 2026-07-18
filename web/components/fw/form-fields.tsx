@@ -1,7 +1,4 @@
 'use client'
-// Shared "Shop Work Order" form field components — the same porcelain inputs used
-// by the public self-submission wizard and the Call Log edit modals. Driven by the
-// .fw CSS variables + .fw-field class (see globals.css); render inside a .fw ancestor.
 import * as React from 'react'
 import { Trash, User } from 'lucide-react'
 import { FwButton, FwDialog } from './primitives'
@@ -131,7 +128,6 @@ export function PrefixInput({
   )
 }
 
-// History / notes textarea with a live word counter and a hard word cap.
 export function HistoryTextarea({
   value,
   onChange,
@@ -172,7 +168,6 @@ export function HistoryTextarea({
   )
 }
 
-// Storage condition (dropdown; free text on "Other") + years in that condition.
 export function StorageField({
   type,
   years,
@@ -186,7 +181,6 @@ export function StorageField({
   onYears: (v: string) => void
   req?: boolean
 }) {
-  // "Other" is active when a value is set that isn't one of the preset options.
   const isPreset = (STORAGE_OPTIONS as readonly string[]).includes(type)
   const [other, setOther] = React.useState(!isPreset && type !== '')
   const selectValue = other ? 'Other' : type
@@ -244,7 +238,6 @@ export function StorageField({
   )
 }
 
-// Collapsible task editor — the self-submit Tasks step, reusable in the edit modal.
 export function TaskEditor({
   tasks,
   setTasks,
