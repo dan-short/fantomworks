@@ -25,7 +25,6 @@ import {
   type DraftPhoto,
 } from '@/lib/photo-upload'
 
-type Task = { topic: string; desc: string; parts: string; hours: string }
 type Form = {
   first: string
   last: string
@@ -41,7 +40,9 @@ type Form = {
   startCustom: string
   storageType: string
   storageYears: string
-  tasks: Task[]
+  tasks: string[]
+  materialsCost: string
+  laborHours: string
   description: string
   photos: UploadedPhoto[]
 }
@@ -61,12 +62,12 @@ const BLANK: Form = {
   startCustom: '',
   storageType: '',
   storageYears: '',
-  tasks: [{ topic: '', desc: '', parts: '', hours: '' }],
+  tasks: [''],
+  materialsCost: '',
+  laborHours: '',
   description: '',
   photos: [],
 }
-
-const emptyTask = (): Task => ({ topic: '', desc: '', parts: '', hours: '' })
 
 const onlyDigits = (v: string) => (v || '').replace(/\D/g, '')
 const formatPhone = (v: string) => {
@@ -94,22 +95,11 @@ const yearOk = (v: string) => {
   const n = yearNum(v)
   return n !== null && n > 1850 && n < 2026
 }
-const taskEmpty = (t: Task) => !t.topic && !t.desc.trim() && !t.parts.trim() && !t.hours.trim()
-const taskComplete = (t: Task) => Boolean(t.topic && t.desc.trim() && numOk(t.parts) && numOk(t.hours))
+const taskEmpty = (t: string) => !t.trim()
+const taskComplete = (t: string) => Boolean(t.trim())
 
-const TOPICS = [
-  'Mechanical',
-  'Body work',
-  'Paint',
-  'Interior',
-  'Trim',
-  'Electrical',
-  'Suspension',
-  'Brakes',
-  'Other',
-]
 const MAX_PHOTOS = 4
-const DRAFT_KEY = 'fw_self_submission_draft_v1'
+const DRAFT_KEY = 'fw_self_submission_draft_v2'
 
 type StepDef = { key: string; label: string; Icon: React.ComponentType<{ size?: number }> }
 const STEPS: StepDef[] = [
@@ -388,7 +378,9 @@ export function SelfSubmissionForm() {
   const [savedLater, setSavedLater] = React.useState(false)
   const [draft, setDraft] = React.useState<{ f: Form; step: number; ts: number } | null>(null)
   const [confirmDel, setConfirmDel] = React.useState<number | null>(null)
-  const [openTask, setOpenTask] = React.useState(0)
+  const [estModal, setEstModal] = React.useState(false)
+  const [ackTime, setAckTime] = React.useState(false)
+  const [ackBudget, setAckBudget] = React.useState(false)
   const [photoWarn, setPhotoWarn] = React.useState(false)
   const fileRef = React.useRef<HTMLInputElement>(null)
 
@@ -442,20 +434,17 @@ export function SelfSubmissionForm() {
     (k: keyof Form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
       setF((s) => ({ ...s, [k]: e.target.value }))
   const setTask =
-    (i: number, k: keyof Task) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+    (i: number) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
       setF((s) => ({
         ...s,
-        tasks: s.tasks.map((t, j) => (j === i ? { ...t, [k]: e.target.value } : t)),
+        tasks: s.tasks.map((t, j) => (j === i ? e.target.value : t)),
       }))
-  const addTask = () => {
-    setF((s) => ({ ...s, tasks: [...s.tasks, emptyTask()] }))
-    setOpenTask(f.tasks.length)
-  }
+  const addTask = () => setF((s) => ({ ...s, tasks: [...s.tasks, ''] }))
   const rmTask = (i: number) =>
     setF((s) => ({
       ...s,
-      tasks: s.tasks.length > 1 ? s.tasks.filter((_, j) => j !== i) : [emptyTask()],
+      tasks: s.tasks.length > 1 ? s.tasks.filter((_, j) => j !== i) : [''],
     }))
 
   const valid = [
@@ -463,7 +452,9 @@ export function SelfSubmissionForm() {
     Boolean(
       f.make && numOk(f.budget) && yearOk(f.year) && (f.startWhen === 'asap' || f.startCustom.trim()),
     ),
-    f.tasks.some(taskComplete) && f.tasks.every((t) => taskEmpty(t) || taskComplete(t)),
+    f.tasks.some(taskComplete) &&
+      (!f.materialsCost || numOk(f.materialsCost)) &&
+      (!f.laborHours || numOk(f.laborHours)),
     true,
     true,
     true,
@@ -682,31 +673,29 @@ export function SelfSubmissionForm() {
               }}
             >
               <p style={{ margin: 0 }}>
-                We hate bureaucracy as much as you do and certainly understand that you are probably
-                asking yourself why we want you to fill out this form. Our hope is that, by asking
-                you to fill out the information below, through that process you&rsquo;ll find out
-                whether or not it makes sense to do your project.
+                There is no time limit — you can finish later if you need time to get photos or other
+                information you find necessary in this application. If you are having problems using
+                this form, please contact{' '}
+                <a href="mailto:webmaster@fantomworks.com">webmaster@fantomworks.com</a> with your
+                name, number, and a good time for us to call and assist you in working through this
+                form.
               </p>
               <p style={{ margin: 0 }}>
-                We typically work on vehicles 1973 and older for good reasons. When the Arab Oil
-                Embargo hit the USA in 1973 there were massive changes made to the way vehicles were
-                manufactured that would forever greatly negatively affect rebuilding those vehicles.
-                The addition of strict emission laws that happened at the same time resulted in a
-                significant change in the way vehicles would be forever built. As a result of those
-                changes, the rebuilding or restoration of those cars becomes more costly while
-                ironically making them worth less money.
+                Dan hates bureaucracy as much as you do and certainly understands that you are
+                probably asking yourself why we want you to fill out this form. His hope is that, by
+                asking you to fill out the information below, you&rsquo;ll find out whether or not it
+                makes sense to do your project. Please remember that we are a classic car restoration
+                and modification shop that typically works on vehicles 1973 and older.
               </p>
               <p style={{ margin: 0 }}>
-                Up until today, I have personally reviewed, read, emailed, or called every single
-                applicant back. Unfortunately, when someone asks for unreasonable or unsafe things,
-                we are unable to assist. Our shop is not a &ldquo;cut rate&rdquo; backyard mechanic
-                shop that uses junk-yard parts. Please take a moment and determine whether your
-                project request is reasonable.
-              </p>
-              <p style={{ margin: 0 }}>
-                After submitting your project, please consider answering your phone from a 757
-                exchange. Over ninety percent of our attempts to contact customers are met by call
-                screening voicemails.{' '}
+                Dan Short personally reviews every single applicant. If you ask for unreasonable or
+                unsafe things, he will be unable to assist and likely not call. Every reasonable
+                request will receive a call. Please ensure your project request is reasonable. After
+                submitting your project, you will receive a call from a 757 phone number. Over ninety
+                percent of his attempts to contact customers are met by call-screening voicemails or
+                automated AI call-intercept software. Dan will ensure the phone rings, and your
+                caller ID of a 757 number will be the ONLY record of the call — Dan does not leave
+                messages for the 90% of people who can&rsquo;t be bothered answering the calls.{' '}
                 <strong style={{ color: 'var(--ink)' }}>
                   After 3 screened calls, if you don&rsquo;t return a call or we can&rsquo;t get
                   through to you, we&rsquo;ll delete your submission and move on.
@@ -714,27 +703,6 @@ export function SelfSubmissionForm() {
                 We will always respect your time and only ask the same in return. Please answer the
                 phone during the times you say you will answer, and if you miss a call from a 757
                 area code, please call back at your earliest opportunity.
-              </p>
-              <p
-                style={{
-                  margin: 0,
-                  padding: '12px 14px',
-                  background: 'var(--paper-sunk)',
-                  borderLeft: '3px solid var(--accent)',
-                  borderRadius: 'var(--radius-sm)',
-                }}
-              >
-                <strong style={{ color: 'var(--ink)' }}>
-                  Please try to fill out this form as completely as possible
-                </strong>
-                , including the uploading of photos of your vehicle&rsquo;s current state, as these
-                are an invaluable tool for Dan understanding the description of your vehicle.
-              </p>
-              <p style={{ margin: 0 }}>
-                If you are having problems using this form, please contact{' '}
-                <a href="mailto:webmaster@fantomworks.com">webmaster@fantomworks.com</a> with your
-                name, number and a good time for us to call and assist you in working through this
-                form.
               </p>
             </div>
             <div style={{ marginTop: 22, display: 'flex', justifyContent: 'flex-end' }}>
@@ -1060,214 +1028,103 @@ export function SelfSubmissionForm() {
               <div>
                 <h2 style={headingStyle}>What do you want done?</h2>
                 <p style={subStyle}>
-                  Break it into tasks — pick a general area, describe it in a line or two, and give
-                  us your best guess at parts cost and labor hours if you have one.
+                  Provide a detailed list of all of the tasks you want accomplished on your vehicle.
                 </p>
               </div>
               <div>
                 <Label req>Tasks</Label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {f.tasks.map((t, i) => {
-                    const open = openTask === i
-                    if (!open) {
-                      return (
-                        <button
-                          key={i}
-                          type="button"
-                          onClick={() => setOpenTask(i)}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 12,
-                            width: '100%',
-                            textAlign: 'left',
-                            cursor: 'pointer',
-                            border: `1px solid ${
-                              taskComplete(t)
-                                ? 'var(--border-hairline)'
-                                : 'color-mix(in oklch,var(--age-stale) 40%,transparent)'
-                            }`,
-                            borderRadius: 'var(--radius-md)',
-                            background: 'var(--surface-card)',
-                            padding: '11px 14px',
-                          }}
-                        >
-                          <span
-                            style={{
-                              fontFamily: 'var(--font-display)',
-                              fontSize: 11,
-                              fontWeight: 600,
-                              letterSpacing: '.08em',
-                              textTransform: 'uppercase',
-                              color: 'var(--faint)',
-                              flexShrink: 0,
-                            }}
-                          >
-                            Task {i + 1}
-                          </span>
-                          <span
-                            style={{
-                              flex: 1,
-                              minWidth: 0,
-                              fontSize: 13,
-                              color: 'var(--ink-2)',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
-                            {[t.topic, t.desc].filter(Boolean).join(' — ') || (
-                              <span style={{ color: 'var(--faint)' }}>Empty — click to fill in</span>
-                            )}
-                          </span>
-                          {(t.parts || t.hours) && (
-                            <span
-                              className="tnum"
-                              style={{
-                                fontFamily: 'var(--font-mono)',
-                                fontSize: 11.5,
-                                color: 'var(--muted)',
-                                flexShrink: 0,
-                              }}
-                            >
-                              {t.parts ? `$${t.parts}` : ''}
-                              {t.parts && t.hours ? ' · ' : ''}
-                              {t.hours ? `${t.hours}h` : ''}
-                            </span>
-                          )}
-                          <span
-                            style={{
-                              color: 'var(--accent)',
-                              fontFamily: 'var(--font-display)',
-                              fontSize: 10,
-                              fontWeight: 600,
-                              letterSpacing: '.08em',
-                              textTransform: 'uppercase',
-                              flexShrink: 0,
-                            }}
-                          >
-                            Edit
-                          </span>
-                        </button>
-                      )
-                    }
-                    return (
-                      <div
-                        key={i}
+                  {f.tasks.map((t, i) => (
+                    <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                      <span
                         style={{
-                          border: '1px solid var(--accent)',
-                          borderRadius: 'var(--radius-md)',
-                          background: 'var(--surface-raised)',
-                          padding: 12,
+                          fontFamily: 'var(--font-display)',
+                          fontSize: 12,
+                          fontWeight: 600,
+                          letterSpacing: '.04em',
+                          color: 'var(--faint)',
+                          flexShrink: 0,
+                          width: 20,
+                          textAlign: 'right',
+                          paddingTop: 11,
                         }}
                       >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                          <span
-                            style={{
-                              fontFamily: 'var(--font-display)',
-                              fontSize: 11,
-                              fontWeight: 600,
-                              letterSpacing: '.08em',
-                              textTransform: 'uppercase',
-                              color: 'var(--faint)',
-                            }}
-                          >
-                            Task {i + 1}
-                          </span>
-                          <div style={{ flex: 1 }} />
-                          <button
-                            type="button"
-                            onClick={() => (taskEmpty(t) ? rmTask(i) : setConfirmDel(i))}
-                            title="Remove task"
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 6,
-                              height: 34,
-                              padding: '0 12px',
-                              borderRadius: 'var(--radius-sm)',
-                              border: '1px solid color-mix(in oklch,var(--age-cold) 40%,transparent)',
-                              background: 'color-mix(in oklch,var(--age-cold) 10%,transparent)',
-                              cursor: 'pointer',
-                              color: 'var(--age-cold)',
-                              fontFamily: 'var(--font-body)',
-                              fontSize: 12.5,
-                              fontWeight: 600,
-                            }}
-                          >
-                            <Trash size={15} />
-                            Delete
-                          </button>
-                        </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 10 }}>
-                          <div style={{ display: 'grid', gridTemplateColumns: '0.9fr 1fr', gap: 10 }}>
-                            <div>
-                              <Label>Area</Label>
-                              <select className="fw-field" value={t.topic} onChange={setTask(i, 'topic')}>
-                                <option value="">Choose an area…</option>
-                                {TOPICS.map((x) => (
-                                  <option key={x} value={x}>
-                                    {x}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                            <div>
-                              <Label>What needs doing</Label>
-                              <input
-                                className="fw-field"
-                                value={t.desc}
-                                onChange={setTask(i, 'desc')}
-                                placeholder={
-                                  i === 0
-                                    ? 'e.g. Fix oil leaks, better tune the Holley Sniper'
-                                    : 'A line or two…'
-                                }
-                              />
-                            </div>
-                          </div>
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                            <div>
-                              <Label>Ballpark parts cost</Label>
-                              <PrefixInput
-                                prefix="$"
-                                error={Boolean(t.parts && !numOk(t.parts))}
-                                value={t.parts}
-                                onChange={setTask(i, 'parts')}
-                                inputMode="decimal"
-                                placeholder="3,200"
-                              />
-                              <Err show={Boolean(t.parts && !numOk(t.parts))}>Numbers only — e.g. 3200.</Err>
-                            </div>
-                            <div>
-                              <Label>Ballpark labor hours</Label>
-                              <PrefixInput
-                                prefix={<User size={14} />}
-                                error={Boolean(t.hours && !numOk(t.hours))}
-                                value={t.hours}
-                                onChange={setTask(i, 'hours')}
-                                inputMode="decimal"
-                                placeholder="60"
-                              />
-                              <Err show={Boolean(t.hours && !numOk(t.hours))}>Numbers only — e.g. 60.</Err>
-                            </div>
-                          </div>
-                          {taskComplete(t) && (
-                            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                              <FwButton variant="ghost" size="sm" onClick={() => setOpenTask(-1)}>
-                                Done — collapse
-                              </FwButton>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )
-                  })}
+                        {i + 1}
+                      </span>
+                      <textarea
+                        className="fw-ta"
+                        value={t}
+                        onChange={setTask(i)}
+                        rows={2}
+                        placeholder={
+                          i === 0
+                            ? 'e.g. Fix the oil leaks and better tune the Holley Sniper'
+                            : 'A line or two about what you want done…'
+                        }
+                        style={{ flex: 1, minHeight: 0 }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => (taskEmpty(t) ? rmTask(i) : setConfirmDel(i))}
+                        title="Remove task"
+                        style={{
+                          display: 'grid',
+                          placeItems: 'center',
+                          width: 38,
+                          height: 38,
+                          flexShrink: 0,
+                          borderRadius: 'var(--radius-sm)',
+                          border: '1px solid color-mix(in oklch,var(--age-cold) 40%,transparent)',
+                          background: 'color-mix(in oklch,var(--age-cold) 10%,transparent)',
+                          cursor: 'pointer',
+                          color: 'var(--age-cold)',
+                        }}
+                      >
+                        <Trash size={15} />
+                      </button>
+                    </div>
+                  ))}
                 </div>
                 <div style={{ marginTop: 12 }}>
                   <FwButton variant="secondary" size="lg" onClick={addTask} style={{ width: '100%' }}>
                     + Add another task
                   </FwButton>
+                </div>
+              </div>
+              <div style={{ display: 'grid', gap: 14 }}>
+                <div>
+                  <Label>
+                    Optional — based on your list, what do you think is the cost of materials to
+                    accomplish that list?
+                  </Label>
+                  <PrefixInput
+                    prefix="$"
+                    error={Boolean(f.materialsCost && !numOk(f.materialsCost))}
+                    value={f.materialsCost}
+                    onChange={set('materialsCost')}
+                    inputMode="decimal"
+                    placeholder="e.g. 12,000"
+                  />
+                  <Err show={Boolean(f.materialsCost && !numOk(f.materialsCost))}>
+                    Numbers only — e.g. 12000.
+                  </Err>
+                </div>
+                <div>
+                  <Label>
+                    Optional — based on your list, how many hours do you think it would take to
+                    accomplish every task on your list?
+                  </Label>
+                  <PrefixInput
+                    prefix={<User size={14} />}
+                    error={Boolean(f.laborHours && !numOk(f.laborHours))}
+                    value={f.laborHours}
+                    onChange={set('laborHours')}
+                    inputMode="decimal"
+                    placeholder="e.g. 200"
+                  />
+                  <Err show={Boolean(f.laborHours && !numOk(f.laborHours))}>
+                    Numbers only — e.g. 200.
+                  </Err>
                 </div>
               </div>
             </div>
@@ -1452,19 +1309,18 @@ export function SelfSubmissionForm() {
                   ],
                   [
                     'Tasks',
-                    f.tasks
-                      .filter((t) => t.desc.trim() || t.topic)
-                      .map(
-                        (t) =>
-                          `• ${[t.topic, t.desc].filter(Boolean).join(': ')}${
-                            t.parts || t.hours
-                              ? `  (${[t.parts ? `$${t.parts}` : '', t.hours ? `${t.hours}h` : '']
-                                  .filter(Boolean)
-                                  .join(' · ')})`
-                              : ''
-                          }`,
-                      )
-                      .join('\n') || '—',
+                    (f.tasks
+                      .filter((t) => t.trim())
+                      .map((t) => `• ${t.trim()}`)
+                      .join('\n') || '—') +
+                      (f.materialsCost || f.laborHours
+                        ? `\nEstimate: ${[
+                            f.materialsCost ? `$${f.materialsCost} materials` : '',
+                            f.laborHours ? `${f.laborHours} hrs labor` : '',
+                          ]
+                            .filter(Boolean)
+                            .join(' · ')}`
+                        : ''),
                     2,
                   ],
                   ['History', f.description || '—', 3],
@@ -1558,6 +1414,12 @@ export function SelfSubmissionForm() {
                 disabled={!valid[step]}
                 onClick={() => {
                   if (!valid[step]) return
+                  if (step === 2 && (f.materialsCost.trim() || f.laborHours.trim())) {
+                    setAckTime(false)
+                    setAckBudget(false)
+                    setEstModal(true)
+                    return
+                  }
                   if (step === 4 && f.photos.length === 0) {
                     setPhotoWarn(true)
                     return
@@ -1613,6 +1475,86 @@ export function SelfSubmissionForm() {
       </FwDialog>
 
       <FwDialog
+        open={estModal}
+        onClose={() => setEstModal(false)}
+        title="Confirm your estimate"
+        width={480}
+        footer={
+          <>
+            <FwButton variant="ghost" onClick={() => setEstModal(false)}>
+              Back
+            </FwButton>
+            <FwButton
+              variant="primary"
+              disabled={!ackTime || !ackBudget}
+              onClick={() => {
+                setEstModal(false)
+                go(3)
+              }}
+            >
+              Confirm
+            </FwButton>
+          </>
+        }
+      >
+        {(() => {
+          const n = Math.max(1, f.tasks.filter(taskComplete).length)
+          const parts = f.materialsCost ? Number(f.materialsCost.replace(/[$,\s]/g, '')) : null
+          const hours = f.laborHours ? Number(f.laborHours.replace(/[$,\s]/g, '')) : null
+          const avgParts = parts != null && !isNaN(parts) ? Math.round(parts / n) : null
+          const avgHours =
+            hours != null && !isNaN(hours) ? Math.round((hours / n) * 10) / 10 : null
+          return (
+            <p
+              style={{
+                margin: '0 0 14px',
+                fontSize: 13.5,
+                color: 'var(--ink-2)',
+                lineHeight: 1.55,
+                padding: '11px 13px',
+                background: 'var(--paper-sunk)',
+                borderLeft: '3px solid var(--accent)',
+                borderRadius: 'var(--radius-sm)',
+              }}
+            >
+              Your estimate is for an average of{' '}
+              <strong style={{ color: 'var(--ink)' }}>
+                {avgParts != null ? `$${avgParts.toLocaleString()}` : '—'}
+              </strong>{' '}
+              in parts and{' '}
+              <strong style={{ color: 'var(--ink)' }}>{avgHours != null ? avgHours : '—'}</strong>{' '}
+              hours of labor per task, across {n} task{n === 1 ? '' : 's'}.
+            </p>
+          )
+        })()}
+        <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', cursor: 'pointer', marginBottom: 12 }}>
+          <input
+            type="checkbox"
+            checked={ackTime}
+            onChange={(e) => setAckTime(e.target.checked)}
+            style={{ marginTop: 3, flexShrink: 0 }}
+          />
+          <span style={{ fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.5 }}>
+            I confirm that I believe this is a reasonable estimate of the time necessary for a person
+            to diagnose, research, order, receive, install, and test all parts.
+          </span>
+        </label>
+        <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={ackBudget}
+            onChange={(e) => setAckBudget(e.target.checked)}
+            style={{ marginTop: 3, flexShrink: 0 }}
+          />
+          <span style={{ fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.5 }}>
+            I also believe that my materials budget is sufficient to purchase the components including
+            all necessary accessories, installation kits, fasteners, and miscellaneous coating and
+            paint materials, including the costs of shipping and taxes at today&rsquo;s prices.
+          </span>
+        </label>
+      </FwDialog>
+
+      <FwDialog
         open={photoWarn}
         onClose={() => setPhotoWarn(false)}
         title="Continue without photos?"
@@ -1635,9 +1577,10 @@ export function SelfSubmissionForm() {
         }
       >
         <p style={{ margin: '0 0 10px', fontSize: 13.5, color: 'var(--ink-2)', lineHeight: 1.55 }}>
-          Submissions without photos are{' '}
-          <strong style={{ color: 'var(--ink)' }}>far less likely to be considered</strong> — photos
-          are one of the most useful things Dan uses to understand your vehicle.
+          Photos are <strong style={{ color: 'var(--ink)' }}>extremely helpful</strong> in allowing
+          us to understand your project. If you do not know how to load them and would prefer to
+          email them, please email them to{' '}
+          <a href="mailto:webmaster@fantomworks.com">webmaster@fantomworks.com</a> separately.
         </p>
         <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)', lineHeight: 1.55 }}>
           No photos handy right now? Use{' '}
