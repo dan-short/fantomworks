@@ -1,8 +1,6 @@
 'use client'
-// LeadCard — the FantomWorks "work order" card. One card per incoming lead,
-// mapping the real Submission + DetailStage[] model onto the design bundle's
-// comfortable / compact layouts.
 import * as React from 'react'
+import Image from 'next/image'
 import {
   Phone,
   Mail,
@@ -35,7 +33,7 @@ import {
   relAge,
 } from './primitives'
 
-const SHOP_RATE = 95 // $/hr — implies a labor figure in the estimate rollup
+const SHOP_RATE = 95
 
 export type LeadActionKey = 'call1' | 'call2' | 'call3' | 'email' | 'bump' | SubmissionStatus
 
@@ -278,6 +276,7 @@ function PhotoTile({ src, name, onClick }: { src: string | null; name: string; o
       onClick={onClick}
       title={name}
       style={{
+        position: 'relative',
         width: '100%',
         height: 108,
         borderRadius: 'var(--radius-sm)',
@@ -299,8 +298,14 @@ function PhotoTile({ src, name, onClick }: { src: string | null; name: string; o
       onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--border-strong)')}
     >
       {src ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={src} alt={name} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        <Image
+          src={src}
+          alt={name}
+          fill
+          sizes="128px"
+          unoptimized={/^(blob:|data:)/.test(src)}
+          style={{ objectFit: 'cover' }}
+        />
       ) : (
         <>
           <Camera size={18} />
@@ -316,10 +321,6 @@ function PhotoTile({ src, name, onClick }: { src: string | null; name: string; o
   )
 }
 
-// In edit mode, wraps a card region so hovering shows a dashed outline + "Edit"
-// chip and clicking opens that section's modal. Inner controls are click-through
-// disabled while editing so the whole region acts as one button. Outside edit
-// mode it renders children untouched (no extra wrapper, layout unchanged).
 function EditZone({
   editMode,
   label,
@@ -438,7 +439,6 @@ export function LeadCard({
       ? `${lead.storage_type}${lead.storage_years != null ? ` · ${lead.storage_years} yr` : ''}`
       : null
 
-  // ── Compact summary row ──
   if (compact && !expanded) {
     return (
       <div
@@ -504,7 +504,6 @@ export function LeadCard({
     )
   }
 
-  // ── Full work-order card ──
   return (
     <div
       style={{
@@ -533,7 +532,6 @@ export function LeadCard({
       <AgeSpine bucket={bucket} />
       <Selector selected={selected} onToggle={onToggleSelect ? () => onToggleSelect(lead.id) : undefined} />
       <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '0.68fr 128px 1.95fr 0.8fr', minWidth: 0 }}>
-        {/* ── Customer ── */}
         <div style={{ padding: '13px 14px 13px 30px', borderRight: '1px solid var(--border-hairline)', minWidth: 0 }}>
           <EditZone editMode={editMode} label="Customer" onClick={() => edit('customer')}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 5 }}>
@@ -592,7 +590,6 @@ export function LeadCard({
           </EditZone>
         </div>
 
-        {/* ── Photos ── */}
         <div style={{ padding: '13px 12px', borderRight: '1px solid var(--border-hairline)', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
           <EditZone editMode={editMode} label="Photos" onClick={() => edit('photos')}>
             <Label>Photos{photos.length ? ` (${photos.length})` : ''}</Label>
@@ -621,7 +618,6 @@ export function LeadCard({
           </EditZone>
         </div>
 
-        {/* ── Project ── */}
         <div style={{ padding: '13px 16px', borderRight: '1px solid var(--border-hairline)', minWidth: 0 }}>
           <EditZone editMode={editMode} label="Vehicle" onClick={() => edit('vehicle')}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
@@ -730,7 +726,6 @@ export function LeadCard({
           </EditZone>
         </div>
 
-        {/* ── Activity rail ── */}
         <div style={{ padding: '13px 12px', display: 'flex', flexDirection: 'column', gap: 0, minWidth: 0, position: 'relative' }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
