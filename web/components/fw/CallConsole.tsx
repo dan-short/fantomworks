@@ -28,7 +28,7 @@ import { PipelineNav, FwButton, FwDialog } from './primitives'
 
 const SORT_FIELDS: { k: SortKey; label: string; phrase: string }[] = [
   { k: 'received', label: 'Received', phrase: 'Newest first' },
-  { k: 'name', label: 'Name', phrase: 'A → Z' },
+  { k: 'name', label: 'Customer name', phrase: 'Last name, A → Z' },
   { k: 'vehicle', label: 'Vehicle year', phrase: 'Oldest → newest' },
   { k: 'distance', label: 'Distance', phrase: 'Farthest first' },
 ]

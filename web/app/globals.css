@@ -245,6 +245,12 @@ body {
   cursor: pointer;
 }
 
+@keyframes fw-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .fw-compact .fw-field {
   padding: 9px 11px;
   font-size: 13px;

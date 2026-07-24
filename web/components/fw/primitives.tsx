@@ -53,6 +53,24 @@ export function AgeDot({ bucket, size = 10 }: { bucket: AgeBucket; size?: number
   )
 }
 
+export function Spinner({ size = 14, color = 'currentColor' }: { size?: number; color?: string }) {
+  return (
+    <span
+      aria-hidden
+      style={{
+        display: 'inline-block',
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        border: `2px solid color-mix(in oklch, ${color} 25%, transparent)`,
+        borderTopColor: color,
+        animation: 'fw-spin .7s linear infinite',
+        flexShrink: 0,
+      }}
+    />
+  )
+}
+
 const TONES: Record<string, string> = {
   neutral: '#6B655D',
   red: '#C1352B',
@@ -475,6 +493,6 @@ export function PipelineNav({
 
 export function fmtDate(ts: string | null): string {
   if (!ts) return ''
-  return new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: '2-digit' })
+  return new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit', timeZone: 'UTC' })
 }
 export { relAge }

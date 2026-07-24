@@ -14,8 +14,17 @@ import {
   Trash,
   User,
 } from 'lucide-react'
-import { FwButton, FwDialog } from './primitives'
-import { StorageField, HistoryTextarea } from './form-fields'
+import { FwButton, FwDialog, Spinner } from './primitives'
+import {
+  StorageField,
+  HistoryTextarea,
+  Label,
+  Field,
+  Err,
+  Row2,
+  PrefixInput,
+  TaskListEditor,
+} from './form-fields'
 import { VEHICLES, MAKES } from '@/lib/vehicles'
 import {
   uploadPhoto,
@@ -24,6 +33,8 @@ import {
   type UploadedPhoto,
   type DraftPhoto,
 } from '@/lib/photo-upload'
+import { submitSelfSubmission } from '@/app/actions/submit'
+import { onlyDigits, formatPhone, phoneOk, zipOk, numOk, yearNum, yearOk, parseTaskList } from '@/lib/form-utils'
 
 type Form = {
   first: string
@@ -40,7 +51,7 @@ type Form = {
   startCustom: string
   storageType: string
   storageYears: string
-  tasks: string[]
+  tasksRaw: string
   materialsCost: string
   laborHours: string
   description: string
@@ -62,41 +73,12 @@ const BLANK: Form = {
   startCustom: '',
   storageType: '',
   storageYears: '',
-  tasks: [''],
+  tasksRaw: '',
   materialsCost: '',
   laborHours: '',
   description: '',
   photos: [],
 }
-
-const onlyDigits = (v: string) => (v || '').replace(/\D/g, '')
-const formatPhone = (v: string) => {
-  const d = onlyDigits(v).slice(0, 10)
-  const a = d.slice(0, 3)
-  const b = d.slice(3, 6)
-  const c = d.slice(6, 10)
-  if (d.length > 6) return `(${a}) ${b}-${c}`
-  if (d.length > 3) return `(${a}) ${b}`
-  if (d.length > 0) return `(${a}`
-  return ''
-}
-const phoneOk = (v: string) => onlyDigits(v).length === 10
-const zipOk = (v: string) => /^\d{5}$/.test((v || '').trim())
-const numOk = (v: string) => {
-  const n = (v || '').replace(/[$,\s]/g, '')
-  return n !== '' && /^\d+(\.\d+)?$/.test(n)
-}
-const yearNum = (v: string) => {
-  const n = parseInt(onlyDigits(v), 10)
-  return isNaN(n) ? null : n
-}
-const yearOk = (v: string) => {
-  if (!(v || '').trim()) return true
-  const n = yearNum(v)
-  return n !== null && n > 1850 && n < 2026
-}
-const taskEmpty = (t: string) => !t.trim()
-const taskComplete = (t: string) => Boolean(t.trim())
 
 const MAX_PHOTOS = 4
 const DRAFT_KEY = 'fw_self_submission_draft_v2'
@@ -110,111 +92,6 @@ const STEPS: StepDef[] = [
   { key: 'photos', label: 'Photos', Icon: Camera },
   { key: 'review', label: 'Review', Icon: CircleCheck },
 ]
-
-function Label({ children, req }: { children: React.ReactNode; req?: boolean }) {
-  return (
-    <label className="fw-label" style={{ display: 'block', marginBottom: 7 }}>
-      {children}
-      {req && <span style={{ color: 'var(--accent)', marginLeft: 3 }}>*</span>}
-    </label>
-  )
-}
-
-function Field({
-  label,
-  req,
-  hint,
-  children,
-}: {
-  label: React.ReactNode
-  req?: boolean
-  hint?: React.ReactNode
-  children: React.ReactNode
-}) {
-  return (
-    <div style={{ minWidth: 0 }}>
-      <Label req={req}>{label}</Label>
-      {children}
-      {hint && <div style={{ fontSize: 12, color: 'var(--faint)', marginTop: 5 }}>{hint}</div>}
-    </div>
-  )
-}
-
-function Err({ show, children }: { show?: boolean | string; children: React.ReactNode }) {
-  if (!show) return null
-  return (
-    <div style={{ fontSize: 12, color: 'var(--age-cold)', marginTop: 5, lineHeight: 1.4 }}>
-      {children}
-    </div>
-  )
-}
-
-function Row2({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>{children}</div>
-  )
-}
-
-function PrefixInput({
-  prefix,
-  error,
-  ...rest
-}: {
-  prefix: React.ReactNode
-  error?: boolean | string
-} & Omit<React.InputHTMLAttributes<HTMLInputElement>, 'prefix'>) {
-  return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'stretch',
-        border: `1px solid ${error ? 'var(--age-cold)' : 'var(--border-strong)'}`,
-        borderRadius: 'var(--radius-sm)',
-        background: 'var(--surface-card)',
-        overflow: 'hidden',
-      }}
-      onFocusCapture={(e) => {
-        e.currentTarget.style.boxShadow = `0 0 0 3px ${
-          error ? 'color-mix(in oklch,var(--age-cold) 22%,transparent)' : 'var(--focus-ring)'
-        }`
-      }}
-      onBlurCapture={(e) => {
-        e.currentTarget.style.boxShadow = 'none'
-      }}
-    >
-      <span
-        style={{
-          display: 'grid',
-          placeItems: 'center',
-          width: 34,
-          flexShrink: 0,
-          background: 'var(--paper-sunk)',
-          borderRight: '1px solid var(--border-hairline)',
-          color: 'var(--muted)',
-          fontFamily: 'var(--font-mono)',
-          fontSize: 15,
-        }}
-      >
-        {prefix}
-      </span>
-      <input
-        className="tnum"
-        style={{
-          flex: 1,
-          minWidth: 0,
-          border: 'none',
-          outline: 'none',
-          background: 'transparent',
-          padding: '10px 12px',
-          fontFamily: 'var(--font-mono)',
-          fontSize: 14,
-          color: 'var(--ink)',
-        }}
-        {...rest}
-      />
-    </div>
-  )
-}
 
 function WhyAsk({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = React.useState(false)
@@ -377,11 +254,14 @@ export function SelfSubmissionForm() {
   const [started, setStarted] = React.useState(false)
   const [savedLater, setSavedLater] = React.useState(false)
   const [draft, setDraft] = React.useState<{ f: Form; step: number; ts: number } | null>(null)
-  const [confirmDel, setConfirmDel] = React.useState<number | null>(null)
+  const [taskConfirmOpen, setTaskConfirmOpen] = React.useState(false)
   const [estModal, setEstModal] = React.useState(false)
   const [ackTime, setAckTime] = React.useState(false)
   const [ackBudget, setAckBudget] = React.useState(false)
   const [photoWarn, setPhotoWarn] = React.useState(false)
+  const [submitting, setSubmitting] = React.useState(false)
+  const [submitError, setSubmitError] = React.useState<string | null>(null)
+  const [uploading, setUploading] = React.useState(false)
   const fileRef = React.useRef<HTMLInputElement>(null)
 
   React.useEffect(() => {
@@ -433,26 +313,12 @@ export function SelfSubmissionForm() {
   const set =
     (k: keyof Form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
       setF((s) => ({ ...s, [k]: e.target.value }))
-  const setTask =
-    (i: number) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-      setF((s) => ({
-        ...s,
-        tasks: s.tasks.map((t, j) => (j === i ? e.target.value : t)),
-      }))
-  const addTask = () => setF((s) => ({ ...s, tasks: [...s.tasks, ''] }))
-  const rmTask = (i: number) =>
-    setF((s) => ({
-      ...s,
-      tasks: s.tasks.length > 1 ? s.tasks.filter((_, j) => j !== i) : [''],
-    }))
-
   const valid = [
     Boolean(f.first && f.last && phoneOk(f.phone) && zipOk(f.zip) && f.schedule.trim()),
     Boolean(
       f.make && numOk(f.budget) && yearOk(f.year) && (f.startWhen === 'asap' || f.startCustom.trim()),
     ),
-    f.tasks.some(taskComplete) &&
+    parseTaskList(f.tasksRaw).length > 0 &&
       (!f.materialsCost || numOk(f.materialsCost)) &&
       (!f.laborHours || numOk(f.laborHours)),
     true,
@@ -472,8 +338,13 @@ export function SelfSubmissionForm() {
     if (!files.length) return
     const room = MAX_PHOTOS - f.photos.length
     const take = files.slice(0, Math.max(0, room))
-    const uploaded = await Promise.all(take.map(uploadPhoto))
-    setF((s) => ({ ...s, photos: [...s.photos, ...uploaded].slice(0, MAX_PHOTOS) }))
+    setUploading(true)
+    try {
+      const uploaded = await Promise.all(take.map(uploadPhoto))
+      setF((s) => ({ ...s, photos: [...s.photos, ...uploaded].slice(0, MAX_PHOTOS) }))
+    } finally {
+      setUploading(false)
+    }
   }
   const rmPhoto = (i: number) =>
     setF((s) => {
@@ -492,7 +363,7 @@ export function SelfSubmissionForm() {
       ['Vehicle', [f.year, f.make, f.model].filter(Boolean).join(' ') || '—'],
       ['Budget', f.budget ? `$${f.budget}` : '—'],
       ['Start', f.startWhen === 'asap' ? 'As soon as possible' : f.startCustom || '—'],
-      ['Tasks', `${f.tasks.filter(taskComplete).length} task(s)`],
+      ['Tasks', `${parseTaskList(f.tasksRaw).length} task(s)`],
       ['Photos', f.photos.length ? `${f.photos.length} attached` : 'None'],
     ]
     return (
@@ -1028,69 +899,29 @@ export function SelfSubmissionForm() {
               <div>
                 <h2 style={headingStyle}>What do you want done?</h2>
                 <p style={subStyle}>
-                  Provide a detailed list of all of the tasks you want accomplished on your vehicle.
+                  Provide a detailed list of all of the tasks you want accomplished on your vehicle.{' '}
+                  <strong style={{ color: 'var(--ink)' }}>
+                    Please ensure you start each task with a dash (-) followed by your task, then
+                    press enter and repeat.
+                  </strong>
                 </p>
               </div>
-              <div>
-                <Label req>Tasks</Label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {f.tasks.map((t, i) => (
-                    <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                      <span
-                        style={{
-                          fontFamily: 'var(--font-display)',
-                          fontSize: 12,
-                          fontWeight: 600,
-                          letterSpacing: '.04em',
-                          color: 'var(--faint)',
-                          flexShrink: 0,
-                          width: 20,
-                          textAlign: 'right',
-                          paddingTop: 11,
-                        }}
-                      >
-                        {i + 1}
-                      </span>
-                      <textarea
-                        className="fw-ta"
-                        value={t}
-                        onChange={setTask(i)}
-                        rows={2}
-                        placeholder={
-                          i === 0
-                            ? 'e.g. Fix the oil leaks and better tune the Holley Sniper'
-                            : 'A line or two about what you want done…'
-                        }
-                        style={{ flex: 1, minHeight: 0 }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => (taskEmpty(t) ? rmTask(i) : setConfirmDel(i))}
-                        title="Remove task"
-                        style={{
-                          display: 'grid',
-                          placeItems: 'center',
-                          width: 38,
-                          height: 38,
-                          flexShrink: 0,
-                          borderRadius: 'var(--radius-sm)',
-                          border: '1px solid color-mix(in oklch,var(--age-cold) 40%,transparent)',
-                          background: 'color-mix(in oklch,var(--age-cold) 10%,transparent)',
-                          cursor: 'pointer',
-                          color: 'var(--age-cold)',
-                        }}
-                      >
-                        <Trash size={15} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-                <div style={{ marginTop: 12 }}>
-                  <FwButton variant="secondary" size="lg" onClick={addTask} style={{ width: '100%' }}>
-                    + Add another task
-                  </FwButton>
-                </div>
-              </div>
+              <TaskListEditor
+                value={f.tasksRaw}
+                onChange={(v) => setF((s) => ({ ...s, tasksRaw: v }))}
+                rows={16}
+                confirmOpen={taskConfirmOpen}
+                onConfirmOpenChange={setTaskConfirmOpen}
+                onConfirm={() => {
+                  if (f.materialsCost.trim() || f.laborHours.trim()) {
+                    setAckTime(false)
+                    setAckBudget(false)
+                    setEstModal(true)
+                  } else {
+                    go(3)
+                  }
+                }}
+              />
               <div style={{ display: 'grid', gap: 14 }}>
                 <div>
                   <Label>
@@ -1172,20 +1003,22 @@ export function SelfSubmissionForm() {
                 <button
                   type="button"
                   onClick={() => fileRef.current?.click()}
+                  disabled={uploading}
                   style={{
                     border: '2px dashed var(--border-strong)',
                     borderRadius: 'var(--radius-md)',
                     background: 'var(--surface-raised)',
                     padding: 26,
-                    cursor: 'pointer',
+                    cursor: uploading ? 'default' : 'pointer',
                     color: 'var(--muted)',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     gap: 8,
+                    opacity: uploading ? 0.7 : 1,
                   }}
                 >
-                  <Camera size={26} />
+                  {uploading ? <Spinner size={22} color="var(--accent)" /> : <Camera size={26} />}
                   <span
                     style={{
                       fontFamily: 'var(--font-display)',
@@ -1195,7 +1028,7 @@ export function SelfSubmissionForm() {
                       textTransform: 'uppercase',
                     }}
                   >
-                    Click to add photos
+                    {uploading ? 'Uploading…' : 'Click to add photos'}
                   </span>
                   <span style={{ fontSize: 12, color: 'var(--faint)' }}>
                     JPG or PNG · {MAX_PHOTOS - f.photos.length} left
@@ -1309,9 +1142,8 @@ export function SelfSubmissionForm() {
                   ],
                   [
                     'Tasks',
-                    (f.tasks
-                      .filter((t) => t.trim())
-                      .map((t) => `• ${t.trim()}`)
+                    (parseTaskList(f.tasksRaw)
+                      .map((t) => `• ${t}`)
                       .join('\n') || '—') +
                       (f.materialsCost || f.laborHours
                         ? `\nEstimate: ${[
@@ -1414,10 +1246,8 @@ export function SelfSubmissionForm() {
                 disabled={!valid[step]}
                 onClick={() => {
                   if (!valid[step]) return
-                  if (step === 2 && (f.materialsCost.trim() || f.laborHours.trim())) {
-                    setAckTime(false)
-                    setAckBudget(false)
-                    setEstModal(true)
+                  if (step === 2) {
+                    setTaskConfirmOpen(true)
                     return
                   }
                   if (step === 4 && f.photos.length === 0) {
@@ -1433,46 +1263,49 @@ export function SelfSubmissionForm() {
               <FwButton
                 variant="primary"
                 icon={<CircleCheck size={15} />}
-                onClick={() => {
+                disabled={submitting}
+                onClick={async () => {
+                  setSubmitting(true)
+                  setSubmitError(null)
+                  const res = await submitSelfSubmission({
+                    first: f.first,
+                    last: f.last,
+                    phone: f.phone,
+                    email: f.email,
+                    zip: f.zip,
+                    schedule: f.schedule,
+                    year: f.year,
+                    make: f.make,
+                    model: f.model,
+                    budget: f.budget,
+                    startWhen: f.startWhen,
+                    startCustom: f.startCustom,
+                    storageType: f.storageType,
+                    storageYears: f.storageYears,
+                    tasksRaw: f.tasksRaw,
+                    materialsCost: f.materialsCost,
+                    laborHours: f.laborHours,
+                    description: f.description,
+                    photos: f.photos.map((p) => ({ path: p.path })),
+                  })
+                  setSubmitting(false)
+                  if (!res.ok) {
+                    setSubmitError(res.error)
+                    return
+                  }
                   clearDraft()
                   setDone(true)
                 }}
               >
-                Submit project
+                {submitting ? 'Submitting…' : 'Submit project'}
               </FwButton>
             )}
           </div>
         </div>
+        {submitError && (
+          <div style={{ fontSize: 12.5, color: 'var(--age-cold)', textAlign: 'right' }}>{submitError}</div>
+        )}
       </main>
-
-      <FwDialog
-        open={confirmDel !== null}
-        onClose={() => setConfirmDel(null)}
-        title="Delete task?"
-        width={380}
-        footer={
-          <>
-            <FwButton variant="ghost" onClick={() => setConfirmDel(null)}>
-              Cancel
-            </FwButton>
-            <FwButton
-              variant="primary"
-              icon={<Trash size={14} />}
-              onClick={() => {
-                if (confirmDel !== null) rmTask(confirmDel)
-                setConfirmDel(null)
-              }}
-            >
-              Delete task
-            </FwButton>
-          </>
-        }
-      >
-        <p style={{ margin: 0, fontSize: 13.5, color: 'var(--ink-2)', lineHeight: 1.55 }}>
-          This removes task {confirmDel !== null ? confirmDel + 1 : ''} and everything you&rsquo;ve
-          entered in it. This can&rsquo;t be undone.
-        </p>
-      </FwDialog>
 
       <FwDialog
         open={estModal}
@@ -1498,7 +1331,7 @@ export function SelfSubmissionForm() {
         }
       >
         {(() => {
-          const n = Math.max(1, f.tasks.filter(taskComplete).length)
+          const n = Math.max(1, parseTaskList(f.tasksRaw).length)
           const parts = f.materialsCost ? Number(f.materialsCost.replace(/[$,\s]/g, '')) : null
           const hours = f.laborHours ? Number(f.laborHours.replace(/[$,\s]/g, '')) : null
           const avgParts = parts != null && !isNaN(parts) ? Math.round(parts / n) : null

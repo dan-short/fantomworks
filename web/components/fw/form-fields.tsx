@@ -1,19 +1,8 @@
 'use client'
 import * as React from 'react'
-import { Trash, User } from 'lucide-react'
+import { ListChecks } from 'lucide-react'
 import { FwButton, FwDialog } from './primitives'
-import {
-  numOk,
-  countWords,
-  clampWords,
-  MAX_HISTORY_WORDS,
-  STORAGE_OPTIONS,
-  TASK_AREAS,
-  taskComplete,
-  taskEmpty,
-  emptyTask,
-  type TaskInput,
-} from '@/lib/form-utils'
+import { numOk, countWords, clampWords, MAX_HISTORY_WORDS, STORAGE_OPTIONS, parseTaskList } from '@/lib/form-utils'
 
 const monoStyle: React.CSSProperties = { fontFamily: 'var(--font-mono)' }
 
@@ -238,256 +227,159 @@ export function StorageField({
   )
 }
 
-export function TaskEditor({
-  tasks,
-  setTasks,
-  firstDescPlaceholder = 'e.g. Fix oil leaks, better tune the Holley Sniper',
-}: {
-  tasks: TaskInput[]
-  setTasks: (updater: (prev: TaskInput[]) => TaskInput[]) => void
-  firstDescPlaceholder?: string
-}) {
-  const [openTask, setOpenTask] = React.useState(0)
-  const [confirmDel, setConfirmDel] = React.useState<number | null>(null)
-
-  const setTask = (i: number, k: keyof TaskInput, v: string) =>
-    setTasks((prev) => prev.map((t, j) => (j === i ? { ...t, [k]: v } : t)))
-  const addTask = () => {
-    setTasks((prev) => [...prev, emptyTask()])
-    setOpenTask(tasks.length)
+function TaskPreviewList({ tasks }: { tasks: string[] }) {
+  if (!tasks.length) {
+    return (
+      <div style={{ fontSize: 12.5, color: 'var(--faint)', padding: '4px 2px', lineHeight: 1.5 }}>
+        Nothing yet — start a line with a dash, e.g. &ldquo;- Fix the oil leak&rdquo;.
+      </div>
+    )
   }
-  const rmTask = (i: number) =>
-    setTasks((prev) => (prev.length > 1 ? prev.filter((_, j) => j !== i) : [emptyTask()]))
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column' }}>
+      {tasks.map((t, i) => (
+        <div
+          key={i}
+          style={{
+            display: 'flex',
+            gap: 8,
+            fontSize: 13,
+            padding: '8px 0',
+            borderBottom: '1px solid var(--border-hairline)',
+            lineHeight: 1.5,
+          }}
+        >
+          <span
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: 11,
+              fontWeight: 600,
+              letterSpacing: '.06em',
+              textTransform: 'uppercase',
+              color: 'var(--accent)',
+              flexShrink: 0,
+              paddingTop: 2,
+            }}
+          >
+            Task {i + 1}:
+          </span>
+          <span style={{ color: 'var(--ink-2)', textWrap: 'pretty' }}>{t}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// One free-form textarea — "- a task per line" — instead of a repeating list
+// of little task boxes. The "Review tasks" button opens a modal with the
+// parsed breakdown and asks the writer to confirm it's right. The preview
+// uses the same parseTaskList() the server saves with, so what someone sees
+// as "Task 1" is exactly what gets saved — if they never used a dash,
+// that's the whole paragraph as one task, which combined with the bold
+// warning is the nudge to go back and break it up.
+//
+// The confirm modal's open state can be driven externally (confirmOpen /
+// onConfirmOpenChange) so a host wizard can pop it as its own "continue"
+// gate — e.g. clicking Continue opens it, and confirming both closes it and
+// advances via onConfirm. Without those props it just manages itself.
+export function TaskListEditor({
+  value,
+  onChange,
+  placeholder,
+  rows = 10,
+  confirmOpen,
+  onConfirmOpenChange,
+  onConfirm,
+}: {
+  value: string
+  onChange: (v: string) => void
+  placeholder?: string
+  rows?: number
+  confirmOpen?: boolean
+  onConfirmOpenChange?: (open: boolean) => void
+  onConfirm?: () => void
+}) {
+  const tasks = React.useMemo(() => parseTaskList(value), [value])
+  const [internalOpen, setInternalOpen] = React.useState(false)
+  const open = confirmOpen ?? internalOpen
+  const setOpen = onConfirmOpenChange ?? setInternalOpen
 
   return (
     <div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {tasks.map((t, i) => {
-          const open = openTask === i
-          if (!open) {
-            return (
-              <button
-                key={i}
-                type="button"
-                onClick={() => setOpenTask(i)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                  width: '100%',
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  border: `1px solid ${
-                    taskComplete(t)
-                      ? 'var(--border-hairline)'
-                      : 'color-mix(in oklch,var(--age-stale) 40%,transparent)'
-                  }`,
-                  borderRadius: 'var(--radius-md)',
-                  background: 'var(--surface-card)',
-                  padding: '11px 14px',
-                }}
-              >
-                <span
-                  style={{
-                    fontFamily: 'var(--font-display)',
-                    fontSize: 11,
-                    fontWeight: 600,
-                    letterSpacing: '.08em',
-                    textTransform: 'uppercase',
-                    color: 'var(--faint)',
-                    flexShrink: 0,
-                  }}
-                >
-                  Task {i + 1}
-                </span>
-                <span
-                  style={{
-                    flex: 1,
-                    minWidth: 0,
-                    fontSize: 13,
-                    color: 'var(--ink-2)',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {[t.topic, t.desc].filter(Boolean).join(' — ') || (
-                    <span style={{ color: 'var(--faint)' }}>Empty — click to fill in</span>
-                  )}
-                </span>
-                {(t.parts || t.hours) && (
-                  <span
-                    className="tnum"
-                    style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5, color: 'var(--muted)', flexShrink: 0 }}
-                  >
-                    {t.parts ? `$${t.parts}` : ''}
-                    {t.parts && t.hours ? ' · ' : ''}
-                    {t.hours ? `${t.hours}h` : ''}
-                  </span>
-                )}
-                <span
-                  style={{
-                    color: 'var(--accent)',
-                    fontFamily: 'var(--font-display)',
-                    fontSize: 10,
-                    fontWeight: 600,
-                    letterSpacing: '.08em',
-                    textTransform: 'uppercase',
-                    flexShrink: 0,
-                  }}
-                >
-                  Edit
-                </span>
-              </button>
-            )
-          }
-          return (
-            <div
-              key={i}
-              style={{
-                border: '1px solid var(--accent)',
-                borderRadius: 'var(--radius-md)',
-                background: 'var(--surface-raised)',
-                padding: 12,
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                <span
-                  style={{
-                    fontFamily: 'var(--font-display)',
-                    fontSize: 11,
-                    fontWeight: 600,
-                    letterSpacing: '.08em',
-                    textTransform: 'uppercase',
-                    color: 'var(--faint)',
-                  }}
-                >
-                  Task {i + 1}
-                </span>
-                <div style={{ flex: 1 }} />
-                <button
-                  type="button"
-                  onClick={() => (taskEmpty(t) ? rmTask(i) : setConfirmDel(i))}
-                  title="Remove task"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    height: 34,
-                    padding: '0 12px',
-                    borderRadius: 'var(--radius-sm)',
-                    border: '1px solid color-mix(in oklch,var(--age-cold) 40%,transparent)',
-                    background: 'color-mix(in oklch,var(--age-cold) 10%,transparent)',
-                    cursor: 'pointer',
-                    color: 'var(--age-cold)',
-                    fontFamily: 'var(--font-body)',
-                    fontSize: 12.5,
-                    fontWeight: 600,
-                  }}
-                >
-                  <Trash size={15} />
-                  Delete
-                </button>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 10 }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '0.9fr 1fr', gap: 10 }}>
-                  <div>
-                    <Label>Area</Label>
-                    <input
-                      className="fw-field"
-                      list="fw-task-areas"
-                      value={t.topic}
-                      onChange={(e) => setTask(i, 'topic', e.target.value)}
-                      placeholder="e.g. Mechanical, Paint…"
-                    />
-                    <datalist id="fw-task-areas">
-                      {TASK_AREAS.map((x) => (
-                        <option key={x} value={x} />
-                      ))}
-                    </datalist>
-                  </div>
-                  <div>
-                    <Label>What needs doing</Label>
-                    <input
-                      className="fw-field"
-                      value={t.desc}
-                      onChange={(e) => setTask(i, 'desc', e.target.value)}
-                      placeholder={i === 0 ? firstDescPlaceholder : 'A line or two…'}
-                    />
-                  </div>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                  <div>
-                    <Label>Ballpark parts cost</Label>
-                    <PrefixInput
-                      prefix="$"
-                      error={Boolean(t.parts && !numOk(t.parts))}
-                      value={t.parts}
-                      onChange={(e) => setTask(i, 'parts', e.target.value)}
-                      inputMode="decimal"
-                      placeholder="3,200"
-                    />
-                    <Err show={Boolean(t.parts && !numOk(t.parts))}>Numbers only — e.g. 3200.</Err>
-                  </div>
-                  <div>
-                    <Label>Ballpark labor hours</Label>
-                    <PrefixInput
-                      prefix={<User size={14} />}
-                      error={Boolean(t.hours && !numOk(t.hours))}
-                      value={t.hours}
-                      onChange={(e) => setTask(i, 'hours', e.target.value)}
-                      inputMode="decimal"
-                      placeholder="60"
-                    />
-                    <Err show={Boolean(t.hours && !numOk(t.hours))}>Numbers only — e.g. 60.</Err>
-                  </div>
-                </div>
-                {taskComplete(t) && (
-                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                    <FwButton variant="ghost" size="sm" onClick={() => setOpenTask(-1)}>
-                      Done — collapse
-                    </FwButton>
-                  </div>
-                )}
-              </div>
-            </div>
-          )
-        })}
-      </div>
-      <div style={{ marginTop: 12 }}>
-        <FwButton variant="secondary" size="lg" onClick={addTask} style={{ width: '100%' }}>
-          + Add another task
-        </FwButton>
+      <Label req>Tasks</Label>
+      <textarea
+        className="fw-field"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        rows={rows}
+        placeholder={
+          placeholder ??
+          '- Fix the oil leaks and better tune the Holley Sniper\n- Replace the headliner\n- Sort out the A/C'
+        }
+        style={{ minHeight: rows * 24, resize: 'vertical' }}
+      />
+
+      <div style={{ marginTop: 10 }}>
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          style={{
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            padding: '13px 16px',
+            border: '1px solid var(--border-strong)',
+            borderRadius: 'var(--radius-sm)',
+            background: 'var(--surface-raised)',
+            color: 'var(--ink-2)',
+            fontFamily: 'var(--font-display)',
+            fontSize: 13,
+            fontWeight: 600,
+            letterSpacing: '.05em',
+            textTransform: 'uppercase',
+            cursor: 'pointer',
+          }}
+        >
+          <ListChecks size={15} />
+          Review tasks{tasks.length ? ` (${tasks.length})` : ''}
+        </button>
       </div>
 
       <FwDialog
-        open={confirmDel !== null}
-        onClose={() => setConfirmDel(null)}
-        title="Delete task?"
-        width={380}
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Confirm your tasks"
+        width={440}
         footer={
-          <>
-            <FwButton variant="ghost" onClick={() => setConfirmDel(null)}>
-              Cancel
-            </FwButton>
-            <FwButton
-              variant="primary"
-              icon={<Trash size={14} />}
-              onClick={() => {
-                if (confirmDel !== null) rmTask(confirmDel)
-                setConfirmDel(null)
-              }}
-            >
-              Delete task
-            </FwButton>
-          </>
+          <FwButton
+            variant="primary"
+            onClick={() => {
+              setOpen(false)
+              onConfirm?.()
+            }}
+            style={{ width: '100%' }}
+          >
+            Yes, continue
+          </FwButton>
         }
       >
-        <p style={{ margin: 0, fontSize: 13.5, color: 'var(--ink-2)', lineHeight: 1.55 }}>
-          This removes task {confirmDel !== null ? confirmDel + 1 : ''} and everything you’ve entered
-          in it. This can’t be undone.
+        <TaskPreviewList tasks={tasks} />
+        <p
+          style={{
+            margin: '14px 0 0',
+            fontSize: 12.5,
+            fontWeight: 700,
+            color: 'var(--age-cold)',
+            lineHeight: 1.5,
+          }}
+        >
+          IF NOT: Please ensure you start each task with a dash (-) followed by your task, then
+          press enter and repeat.
         </p>
       </FwDialog>
     </div>
   )
 }
+

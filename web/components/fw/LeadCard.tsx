@@ -18,10 +18,12 @@ import {
   Undo,
   ChevronRight,
   Pencil,
+  Printer,
 } from 'lucide-react'
 import type { Submission, DetailStage, SubmissionStatus } from '@/lib/types'
 import type { EditSection } from './LeadEditDialog'
 import { resolvePhotoUrl } from '@/lib/images'
+import { printSubmission } from '@/lib/print-submission'
 import {
   AgeSpine,
   Badge,
@@ -33,7 +35,7 @@ import {
   relAge,
 } from './primitives'
 
-const SHOP_RATE = 95
+const SHOP_RATE = 150
 
 export type LeadActionKey = 'call1' | 'call2' | 'call3' | 'email' | 'bump' | SubmissionStatus
 
@@ -475,7 +477,7 @@ export function LeadCard({
             <span style={{ fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 600, color: 'var(--ink)', whiteSpace: 'nowrap' }}>
               {lead.first_name} {lead.last_name}
             </span>
-            {online ? <Badge tone="sky">Online</Badge> : <Badge tone="amber">Office</Badge>}
+            {online ? <Badge tone="sky">Online</Badge> : <Badge tone="amber">{lead.added_by || 'Office'}</Badge>}
           </span>
           <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: 'var(--ink-2)', minWidth: 0 }}>
             <span style={{ color: 'var(--accent)', display: 'flex' }}>
@@ -485,7 +487,7 @@ export function LeadCard({
           </span>
           <ContactCue last={last} />
           <span className="tnum" style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--muted)', whiteSpace: 'nowrap', textAlign: 'right' }}>
-            {lead.budget != null ? `$${lead.budget.toLocaleString()}` : ''}
+            {lead.budget != null ? `$${lead.budget.toLocaleString('en-US')}` : ''}
             <span style={{ color: 'var(--faint)', marginLeft: 8 }}>{relAge(lead.received_date)}</span>
           </span>
           <span style={{ color: 'var(--faint)', display: 'flex' }}>
@@ -538,7 +540,7 @@ export function LeadCard({
               <span style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 600, letterSpacing: '.01em', color: 'var(--ink)', lineHeight: 1.05 }}>
                 {lead.first_name} {lead.last_name}
               </span>
-              {online ? <Badge tone="sky">Online</Badge> : <Badge tone="amber">Office{lead.added_by ? ` · ${lead.added_by}` : ''}</Badge>}
+              {online ? <Badge tone="sky">Online</Badge> : <Badge tone="amber">{lead.added_by || 'Office'}</Badge>}
             </div>
           </EditZone>
           <EditZone editMode={editMode} label="Vehicle" onClick={() => edit('vehicle')} style={{ marginTop: 3 }}>
@@ -623,7 +625,7 @@ export function LeadCard({
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
               {lead.budget != null && (
                 <span className="tnum" style={{ fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 600, color: 'var(--ink)' }}>
-                  Budget ${lead.budget.toLocaleString()}
+                  Budget ${lead.budget.toLocaleString('en-US')}
                 </span>
               )}
               {lead.project_start && <span style={{ fontSize: 11, color: 'var(--muted)' }}>Start · {lead.project_start}</span>}
@@ -676,7 +678,7 @@ export function LeadCard({
                     <span style={{ flex: 1, color: 'var(--muted)', lineHeight: 1.5, textWrap: 'pretty' }}>{st.description}</span>
                     {!isOffice && (
                       <span className="tnum" style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, color: 'var(--faint)', whiteSpace: 'nowrap' }}>
-                        {st.parts_cost ? `$${st.parts_cost.toLocaleString()}` : ''}
+                        {st.parts_cost ? `$${st.parts_cost.toLocaleString('en-US')}` : ''}
                         {st.hours ? ` · ${st.hours}h` : ''}
                       </span>
                     )}
@@ -711,11 +713,16 @@ export function LeadCard({
                   >
                     Est. Total
                   </span>
-                  <span style={{ display: 'flex', gap: 14, fontSize: 12, color: 'var(--muted)', flexWrap: 'wrap' }}>
-                    <span>{totalHours}h</span>
-                    <span>parts ${totalParts.toLocaleString()}</span>
-                    <span style={{ color: 'var(--faint)' }}>labor ~${(totalHours * SHOP_RATE).toLocaleString()}</span>
-                    <span style={{ color: 'var(--ink)', fontWeight: 600 }}>≈ ${estTotal.toLocaleString()}</span>
+                  <span style={{ display: 'flex', alignItems: 'baseline', gap: 6, fontSize: 12, color: 'var(--muted)', flexWrap: 'wrap' }}>
+                    <span>
+                      {totalHours}h (${(totalHours * SHOP_RATE).toLocaleString('en-US')})
+                    </span>
+                    <span style={{ color: 'var(--faint)' }}>·</span>
+                    <span>${totalParts.toLocaleString('en-US')} in parts</span>
+                    <span style={{ color: 'var(--faint)' }}>≈</span>
+                    <span style={{ color: 'var(--ink)', fontWeight: 600 }}>
+                      estimated total cost ${estTotal.toLocaleString('en-US')}
+                    </span>
                   </span>
                 </div>
               )}
@@ -772,6 +779,16 @@ export function LeadCard({
               <FwTooltip label="Send to top of the list">
                 <FwButton variant="ghost" size="sm" icon={<ArrowUp size={13} />} onClick={() => act('bump')}>
                   Bump
+                </FwButton>
+              </FwTooltip>
+              <FwTooltip label="Print a PDF of what the customer submitted">
+                <FwButton
+                  variant="ghost"
+                  size="sm"
+                  icon={<Printer size={13} />}
+                  onClick={() => printSubmission(lead, stages)}
+                >
+                  Print
                 </FwButton>
               </FwTooltip>
             </div>

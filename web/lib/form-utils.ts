@@ -51,6 +51,32 @@ export const clampWords = (v: string, max = MAX_HISTORY_WORDS) => {
   return out
 }
 
+// Splits free-form "- one task per line" text into discrete tasks. A line
+// starting with -/*/• begins a new task; any line without that prefix is
+// treated as a continuation of the current one. If the writer never uses a
+// bullet at all, everything collapses into a single task — which is the
+// point: it surfaces as "Task 1: <whole paragraph>" in the preview so
+// someone who just rambled in one block can see they need to break it up.
+export const parseTaskList = (raw: string): string[] => {
+  const tasks: string[] = []
+  let current: string[] = []
+  let started = false
+  for (const rawLine of raw.split('\n')) {
+    const line = rawLine.trim()
+    if (!line) continue
+    const m = /^[-*•]\s*(.*)$/.exec(line)
+    if (m) {
+      if (started) tasks.push(current.join(' ').trim())
+      current = [m[1]]
+      started = true
+    } else {
+      current.push(line)
+    }
+  }
+  if (current.length) tasks.push(current.join(' ').trim())
+  return tasks.filter(Boolean)
+}
+
 export const STORAGE_OPTIONS = [
   'Indoor — climate-controlled',
   'Indoor — unheated garage / barn',
@@ -62,21 +88,3 @@ export const STORAGE_OPTIONS = [
   'Other',
 ] as const
 
-export type TaskInput = { topic: string; desc: string; parts: string; hours: string }
-export const emptyTask = (): TaskInput => ({ topic: '', desc: '', parts: '', hours: '' })
-export const taskEmpty = (t: TaskInput) =>
-  !t.topic && !t.desc.trim() && !t.parts.trim() && !t.hours.trim()
-export const taskComplete = (t: TaskInput) =>
-  Boolean(t.topic && t.desc.trim() && numOk(t.parts) && numOk(t.hours))
-
-export const TASK_AREAS = [
-  'Mechanical',
-  'Body work',
-  'Paint',
-  'Interior',
-  'Trim',
-  'Electrical',
-  'Suspension',
-  'Brakes',
-  'Other',
-] as const

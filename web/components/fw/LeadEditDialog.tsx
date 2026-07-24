@@ -1,9 +1,9 @@
 'use client'
 import * as React from 'react'
 import Image from 'next/image'
-import { Camera, Trash, Plus } from 'lucide-react'
+import { Camera, Trash, Plus, User } from 'lucide-react'
 import type { Submission, DetailStage } from '@/lib/types'
-import { FwButton, FwDialog } from './primitives'
+import { FwButton, FwDialog, Spinner } from './primitives'
 import {
   Field,
   Row2,
@@ -12,18 +12,10 @@ import {
   PrefixInput,
   HistoryTextarea,
   StorageField,
-  TaskEditor,
+  TaskListEditor,
 } from './form-fields'
 import { VEHICLES, MAKES } from '@/lib/vehicles'
-import {
-  formatPhone,
-  phoneOk,
-  zipOk,
-  numOk,
-  parseNum,
-  yearOk,
-  type TaskInput,
-} from '@/lib/form-utils'
+import { formatPhone, phoneOk, zipOk, numOk, parseNum, yearOk, parseTaskList } from '@/lib/form-utils'
 import { PHOTO_BUCKET, resolvePhotoUrl } from '@/lib/images'
 import { uploadPhoto } from '@/lib/photo-upload'
 import { updateLead, setStages, setPhotos, type StageInput } from '@/app/actions/submissions'
@@ -80,31 +72,39 @@ export function LeadEditDialog({
 
   const [history, setHistory] = React.useState(lead.project_description ?? '')
 
-  const [tasks, setTasks] = React.useState<TaskInput[]>(() =>
-    stages.length
-      ? stages.map((s) => ({
-          topic: s.label ?? '',
-          desc: s.description ?? '',
-          parts: s.parts_cost != null ? String(s.parts_cost) : '',
-          hours: s.hours != null ? String(s.hours) : '',
-        }))
-      : [{ topic: '', desc: '', parts: '', hours: '' }],
-  )
+  const [tasksRaw, setTasksRaw] = React.useState(() => {
+    const descs = stages.map((s) => s.description ?? '').filter((d) => d.trim())
+    return descs.map((d) => `- ${d}`).join('\n')
+  })
+  const [materialsCost, setMaterialsCost] = React.useState(() => {
+    const sum = stages.reduce((s, x) => s + (x.parts_cost || 0), 0)
+    return sum ? String(sum) : ''
+  })
+  const [laborHours, setLaborHours] = React.useState(() => {
+    const sum = stages.reduce((s, x) => s + (x.hours || 0), 0)
+    return sum ? String(sum) : ''
+  })
 
   const [photos, setPhotoState] = React.useState<PhotoItem[]>(() =>
     (lead.images ?? []).map((v, i) => ({ value: v, url: lead.image_urls?.[i] || resolvePhotoUrl(v) })),
   )
   const fileRef = React.useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = React.useState(false)
 
   const onPickFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? [])
     e.target.value = ''
     if (!files.length) return
     const room = MAX_PHOTOS - photos.length
-    for (const file of files.slice(0, Math.max(0, room))) {
-      const up = await uploadPhoto(file)
-      const value = up.path ? `${PHOTO_BUCKET}/${up.path}` : up.previewUrl
-      setPhotoState((prev) => [...prev, { value, url: up.previewUrl }].slice(0, MAX_PHOTOS))
+    setUploading(true)
+    try {
+      for (const file of files.slice(0, Math.max(0, room))) {
+        const up = await uploadPhoto(file)
+        const value = up.path ? `${PHOTO_BUCKET}/${up.path}` : up.previewUrl
+        setPhotoState((prev) => [...prev, { value, url: up.previewUrl }].slice(0, MAX_PHOTOS))
+      }
+    } finally {
+      setUploading(false)
     }
   }
   const rmPhoto = (i: number) =>
@@ -123,12 +123,18 @@ export function LeadEditDialog({
     yearOk(veh.year) &&
     (!veh.budget || numOk(veh.budget)) &&
     (!veh.storageYears || numOk(veh.storageYears))
+  const tasksValid =
+    parseTaskList(tasksRaw).length > 0 &&
+    (!materialsCost || numOk(materialsCost)) &&
+    (!laborHours || numOk(laborHours))
   const canSave =
     section === 'customer'
       ? custValid
       : section === 'vehicle'
         ? vehValid
-        : true
+        : section === 'tasks'
+          ? tasksValid
+          : true
 
   async function save() {
     setSaving(true)
@@ -158,11 +164,17 @@ export function LeadEditDialog({
       } else if (section === 'history') {
         await updateLead(lead.id, { project_description: history.trim() || null })
       } else if (section === 'tasks') {
-        const payload: StageInput[] = tasks.map((t) => ({
-          label: t.topic.trim(),
-          description: t.desc.trim() || null,
-          parts_cost: parseNum(t.parts),
-          hours: parseNum(t.hours),
+        const complete = parseTaskList(tasksRaw)
+        const n = Math.max(1, complete.length)
+        const totalParts = parseNum(materialsCost)
+        const totalHours = parseNum(laborHours)
+        const avgParts = totalParts != null ? Math.round(totalParts / n) : null
+        const avgHours = totalHours != null ? Math.round(totalHours / n) : null
+        const payload: StageInput[] = complete.map((t, i) => ({
+          label: `Task ${i + 1}`,
+          description: t.trim(),
+          parts_cost: avgParts,
+          hours: avgHours,
         }))
         await setStages(lead.id, payload)
       } else if (section === 'photos') {
@@ -189,13 +201,13 @@ export function LeadEditDialog({
       open
       onClose={onClose}
       title={SECTION_TITLE[section]}
-      width={section === 'tasks' || section === 'photos' ? 620 : 540}
+      width={section === 'photos' ? 620 : 540}
       footer={
         <>
           <FwButton variant="ghost" onClick={onClose} disabled={saving}>
             Cancel
           </FwButton>
-          <FwButton variant="primary" onClick={save} disabled={!canSave || saving}>
+          <FwButton variant="primary" onClick={save} disabled={!canSave || saving || uploading}>
             {saving ? 'Saving…' : 'Save changes'}
           </FwButton>
         </>
@@ -325,7 +337,39 @@ export function LeadEditDialog({
       )}
 
       {section === 'tasks' && (
-        <TaskEditor tasks={tasks} setTasks={setTasks} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+          <TaskListEditor value={tasksRaw} onChange={setTasksRaw} rows={8} />
+          <div style={{ display: 'grid', gap: 14 }}>
+            <div>
+              <Label>
+                Optional — based on the list, what&rsquo;s the cost of materials to accomplish it?
+              </Label>
+              <PrefixInput
+                prefix="$"
+                error={Boolean(materialsCost && !numOk(materialsCost))}
+                value={materialsCost}
+                onChange={(e) => setMaterialsCost(e.target.value)}
+                inputMode="decimal"
+                placeholder="e.g. 12,000"
+              />
+              <Err show={Boolean(materialsCost && !numOk(materialsCost))}>Numbers only — e.g. 12000.</Err>
+            </div>
+            <div>
+              <Label>
+                Optional — how many hours would it take to accomplish every task on the list?
+              </Label>
+              <PrefixInput
+                prefix={<User size={14} />}
+                error={Boolean(laborHours && !numOk(laborHours))}
+                value={laborHours}
+                onChange={(e) => setLaborHours(e.target.value)}
+                inputMode="decimal"
+                placeholder="e.g. 200"
+              />
+              <Err show={Boolean(laborHours && !numOk(laborHours))}>Numbers only — e.g. 200.</Err>
+            </div>
+          </div>
+        </div>
       )}
 
       {section === 'photos' && (
@@ -392,22 +436,24 @@ export function LeadEditDialog({
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
+              disabled={uploading}
               style={{
                 border: '2px dashed var(--border-strong)',
                 borderRadius: 'var(--radius-md)',
                 background: 'var(--surface-raised)',
                 padding: 22,
-                cursor: 'pointer',
+                cursor: uploading ? 'default' : 'pointer',
                 color: 'var(--muted)',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 gap: 8,
+                opacity: uploading ? 0.7 : 1,
               }}
             >
-              <Plus size={22} />
+              {uploading ? <Spinner size={20} color="var(--accent)" /> : <Plus size={22} />}
               <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase' }}>
-                Add photos
+                {uploading ? 'Uploading…' : 'Add photos'}
               </span>
               <span style={{ fontSize: 12, color: 'var(--faint)' }}>JPG or PNG · {MAX_PHOTOS - photos.length} left</span>
             </button>

@@ -260,4 +260,28 @@ export const devStore = {
     if (stages.length) all[id] = stages
     else delete all[id]
   },
+  insert(patch: Partial<Submission>, stages: DetailStage[] = []): number {
+    const subs = devSubs()
+    const id = subs.reduce((m, s) => Math.max(m, s.id), 0) + 1
+    const legacy_id = subs.reduce((m, s) => Math.max(m, s.legacy_id), 0) + 1
+    const row: Submission = {
+      id,
+      legacy_id,
+      source: 'live',
+      first_name: null, last_name: null, phone: null, alt_phone: null,
+      call_schedule: null, email: null, street: null, zipcode: null,
+      city: null, state_country: null, time_zone: null, distance_miles: null,
+      year: null, make: null, model: null, budget: null, project_start: null,
+      project_description: null, restoration_decision_matrix: null,
+      storage_type: null, storage_years: null,
+      status: 'new', received_date: null, original_date: null, bumped_at: null,
+      added_by: null, notes: null,
+      call_attempt_one: null, call_attempt_two: null, call_attempt_three: null,
+      email_attempt: null, images: [],
+      ...patch,
+    }
+    subs.push(row)
+    if (stages.length) devDetails()[id] = stages
+    return id
+  },
 }
