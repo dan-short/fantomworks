@@ -34,7 +34,17 @@ import {
   type DraftPhoto,
 } from '@/lib/photo-upload'
 import { submitSelfSubmission } from '@/app/actions/submit'
-import { onlyDigits, formatPhone, phoneOk, zipOk, numOk, yearNum, yearOk, parseTaskList } from '@/lib/form-utils'
+import {
+  onlyDigits,
+  formatPhone,
+  phoneOk,
+  zipOk,
+  numOk,
+  parseNum,
+  yearNum,
+  yearOk,
+  parseTaskList,
+} from '@/lib/form-utils'
 
 type Form = {
   first: string
@@ -92,6 +102,68 @@ const STEPS: StepDef[] = [
   { key: 'photos', label: 'Photos', Icon: Camera },
   { key: 'review', label: 'Review', Icon: CircleCheck },
 ]
+
+// A clickable acknowledgement row with a check + CONFIRM affordance.
+function ConfirmCheck({
+  checked,
+  onChange,
+  children,
+}: {
+  checked: boolean
+  onChange: (v: boolean) => void
+  children: React.ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onChange(!checked)}
+      style={{
+        display: 'flex',
+        gap: 12,
+        alignItems: 'flex-start',
+        width: '100%',
+        textAlign: 'left',
+        cursor: 'pointer',
+        padding: '12px 14px',
+        borderRadius: 'var(--radius-md)',
+        border: `1px solid ${checked ? 'var(--accent)' : 'var(--border-strong)'}`,
+        background: checked ? 'var(--accent-tint)' : 'var(--surface-card)',
+      }}
+    >
+      <span
+        style={{
+          width: 22,
+          height: 22,
+          flexShrink: 0,
+          marginTop: 1,
+          borderRadius: 'var(--radius-sm)',
+          display: 'grid',
+          placeItems: 'center',
+          border: `1px solid ${checked ? 'var(--accent)' : 'var(--border-strong)'}`,
+          background: checked ? 'var(--accent)' : 'transparent',
+          color: '#fff',
+        }}
+      >
+        {checked && <CircleCheck size={15} />}
+      </span>
+      <span style={{ flex: 1, fontSize: 13, lineHeight: 1.5, color: 'var(--ink-2)' }}>{children}</span>
+      <span
+        style={{
+          flexShrink: 0,
+          marginTop: 3,
+          fontFamily: 'var(--font-display)',
+          fontSize: 10,
+          fontWeight: 700,
+          letterSpacing: '.1em',
+          textTransform: 'uppercase',
+          color: checked ? 'var(--accent)' : 'var(--faint)',
+        }}
+      >
+        {checked ? 'Confirmed' : 'Confirm'}
+      </span>
+    </button>
+  )
+}
 
 function WhyAsk({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = React.useState(false)
@@ -255,9 +327,14 @@ export function SelfSubmissionForm() {
   const [savedLater, setSavedLater] = React.useState(false)
   const [draft, setDraft] = React.useState<{ f: Form; step: number; ts: number } | null>(null)
   const [taskConfirmOpen, setTaskConfirmOpen] = React.useState(false)
-  const [estModal, setEstModal] = React.useState(false)
-  const [ackTime, setAckTime] = React.useState(false)
-  const [ackBudget, setAckBudget] = React.useState(false)
+  const [estimateOpen, setEstimateOpen] = React.useState(false)
+  const [confirmTime, setConfirmTime] = React.useState(false)
+  const [confirmBudget, setConfirmBudget] = React.useState(false)
+  // Any forward move out of Tasks (via Continue OR the stepper) routes through
+  // the task-confirm modal, then the estimate gate if a parts/hours estimate
+  // was given. pendingStep remembers where they were headed so either gate can
+  // finish the trip.
+  const [pendingStep, setPendingStep] = React.useState<number | null>(null)
   const [photoWarn, setPhotoWarn] = React.useState(false)
   const [submitting, setSubmitting] = React.useState(false)
   const [submitError, setSubmitError] = React.useState<string | null>(null)
@@ -330,6 +407,21 @@ export function SelfSubmissionForm() {
     const t = Math.max(0, Math.min(STEPS.length - 1, n))
     setStep(t)
     setMax((m) => Math.max(m, t))
+  }
+
+  // Any forward move out of the Tasks step routes through the task-confirm
+  // modal first, then the estimate gate if the customer entered a parts/hours
+  // estimate. Used by both the Continue button and the stepper so neither can
+  // bypass either confirmation.
+  const needBudget = parseNum(f.materialsCost) != null
+  const needTime = parseNum(f.laborHours) != null
+  const requestStep = (target: number) => {
+    if (step === 2 && target > 2) {
+      setPendingStep(target)
+      setTaskConfirmOpen(true)
+      return
+    }
+    go(target)
   }
 
   const onPickFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -543,30 +635,38 @@ export function SelfSubmissionForm() {
                 textWrap: 'pretty',
               }}
             >
-              <p style={{ margin: 0 }}>
-                There is no time limit — you can finish later if you need time to get photos or other
-                information you find necessary in this application. If you are having problems using
-                this form, please contact{' '}
+              <p
+                style={{
+                  margin: 0,
+                  padding: '12px 14px',
+                  background: 'var(--paper-sunk)',
+                  borderLeft: '3px solid var(--accent)',
+                  borderRadius: 'var(--radius-sm)',
+                }}
+              >
+                <strong style={{ color: 'var(--ink)' }}>There is no time limit</strong> — you can
+                finish later if you need time to get photos or other information you find necessary
+                in this application. If you are having problems using this form, please contact{' '}
                 <a href="mailto:webmaster@fantomworks.com">webmaster@fantomworks.com</a> with your
-                name, number, and a good time for us to call and assist you in working through this
+                name, number and a good time for us to call and assist you in working through this
                 form.
               </p>
               <p style={{ margin: 0 }}>
                 Dan hates bureaucracy as much as you do and certainly understands that you are
                 probably asking yourself why we want you to fill out this form. His hope is that, by
                 asking you to fill out the information below, you&rsquo;ll find out whether or not it
-                makes sense to do your project. Please remember that we are a classic car restoration
-                and modification shop that typically works on vehicles 1973 and older.
+                makes sense to do your project — and please remember that we are a classic car
+                restoration and modification shop that typically works on vehicles 1973 and older.
               </p>
               <p style={{ margin: 0 }}>
                 Dan Short personally reviews every single applicant. If you ask for unreasonable or
                 unsafe things, he will be unable to assist and likely not call. Every reasonable
                 request will receive a call. Please ensure your project request is reasonable. After
                 submitting your project, you will receive a call from a 757 phone number. Over ninety
-                percent of his attempts to contact customers are met by call-screening voicemails or
-                automated AI call-intercept software. Dan will ensure the phone rings, and your
-                caller ID of a 757 number will be the ONLY record of the call — Dan does not leave
-                messages for the 90% of people who can&rsquo;t be bothered answering the calls.{' '}
+                percent of his attempts to contact customers are met by call screening voicemails or
+                automated AI call intercept software. Dan will ensure the phone rings and your caller
+                ID of a 757 number will be the ONLY record of the call — Dan does not leave messages
+                for the 90% of the people who can&rsquo;t be bothered answering the calls.{' '}
                 <strong style={{ color: 'var(--ink)' }}>
                   After 3 screened calls, if you don&rsquo;t return a call or we can&rsquo;t get
                   through to you, we&rsquo;ll delete your submission and move on.
@@ -651,7 +751,7 @@ export function SelfSubmissionForm() {
           gap: 18,
         }}
       >
-        <Stepper step={step} setStep={go} maxReached={maxReached} />
+        <Stepper step={step} setStep={requestStep} maxReached={maxReached} />
 
         <section
           style={{
@@ -913,10 +1013,13 @@ export function SelfSubmissionForm() {
                 confirmOpen={taskConfirmOpen}
                 onConfirmOpenChange={setTaskConfirmOpen}
                 onConfirm={() => {
-                  if (f.materialsCost.trim() || f.laborHours.trim()) {
-                    setAckTime(false)
-                    setAckBudget(false)
-                    setEstModal(true)
+                  if (needBudget || needTime) {
+                    setConfirmTime(false)
+                    setConfirmBudget(false)
+                    setEstimateOpen(true)
+                  } else if (pendingStep != null) {
+                    go(pendingStep)
+                    setPendingStep(null)
                   } else {
                     go(3)
                   }
@@ -1246,15 +1349,14 @@ export function SelfSubmissionForm() {
                 disabled={!valid[step]}
                 onClick={() => {
                   if (!valid[step]) return
-                  if (step === 2) {
-                    setTaskConfirmOpen(true)
-                    return
-                  }
                   if (step === 4 && f.photos.length === 0) {
                     setPhotoWarn(true)
                     return
                   }
-                  go(step + 1)
+                  // step 2 → task-confirm, then the estimate gate if needed —
+                  // both handled inside requestStep so Continue and the
+                  // stepper can't bypass either confirmation.
+                  requestStep(step + 1)
                 }}
               >
                 Continue
@@ -1308,86 +1410,6 @@ export function SelfSubmissionForm() {
       </main>
 
       <FwDialog
-        open={estModal}
-        onClose={() => setEstModal(false)}
-        title="Confirm your estimate"
-        width={480}
-        footer={
-          <>
-            <FwButton variant="ghost" onClick={() => setEstModal(false)}>
-              Back
-            </FwButton>
-            <FwButton
-              variant="primary"
-              disabled={!ackTime || !ackBudget}
-              onClick={() => {
-                setEstModal(false)
-                go(3)
-              }}
-            >
-              Confirm
-            </FwButton>
-          </>
-        }
-      >
-        {(() => {
-          const n = Math.max(1, parseTaskList(f.tasksRaw).length)
-          const parts = f.materialsCost ? Number(f.materialsCost.replace(/[$,\s]/g, '')) : null
-          const hours = f.laborHours ? Number(f.laborHours.replace(/[$,\s]/g, '')) : null
-          const avgParts = parts != null && !isNaN(parts) ? Math.round(parts / n) : null
-          const avgHours =
-            hours != null && !isNaN(hours) ? Math.round((hours / n) * 10) / 10 : null
-          return (
-            <p
-              style={{
-                margin: '0 0 14px',
-                fontSize: 13.5,
-                color: 'var(--ink-2)',
-                lineHeight: 1.55,
-                padding: '11px 13px',
-                background: 'var(--paper-sunk)',
-                borderLeft: '3px solid var(--accent)',
-                borderRadius: 'var(--radius-sm)',
-              }}
-            >
-              Your estimate is for an average of{' '}
-              <strong style={{ color: 'var(--ink)' }}>
-                {avgParts != null ? `$${avgParts.toLocaleString()}` : '—'}
-              </strong>{' '}
-              in parts and{' '}
-              <strong style={{ color: 'var(--ink)' }}>{avgHours != null ? avgHours : '—'}</strong>{' '}
-              hours of labor per task, across {n} task{n === 1 ? '' : 's'}.
-            </p>
-          )
-        })()}
-        <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', cursor: 'pointer', marginBottom: 12 }}>
-          <input
-            type="checkbox"
-            checked={ackTime}
-            onChange={(e) => setAckTime(e.target.checked)}
-            style={{ marginTop: 3, flexShrink: 0 }}
-          />
-          <span style={{ fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.5 }}>
-            I confirm that I believe this is a reasonable estimate of the time necessary for a person
-            to diagnose, research, order, receive, install, and test all parts.
-          </span>
-        </label>
-        <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', cursor: 'pointer' }}>
-          <input
-            type="checkbox"
-            checked={ackBudget}
-            onChange={(e) => setAckBudget(e.target.checked)}
-            style={{ marginTop: 3, flexShrink: 0 }}
-          />
-          <span style={{ fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.5 }}>
-            I also believe that my materials budget is sufficient to purchase the components including
-            all necessary accessories, installation kits, fasteners, and miscellaneous coating and
-            paint materials, including the costs of shipping and taxes at today&rsquo;s prices.
-          </span>
-        </label>
-      </FwDialog>
-
-      <FwDialog
         open={photoWarn}
         onClose={() => setPhotoWarn(false)}
         title="Continue without photos?"
@@ -1410,7 +1432,7 @@ export function SelfSubmissionForm() {
         }
       >
         <p style={{ margin: '0 0 10px', fontSize: 13.5, color: 'var(--ink-2)', lineHeight: 1.55 }}>
-          Photos are <strong style={{ color: 'var(--ink)' }}>extremely helpful</strong> in allowing
+          <strong style={{ color: 'var(--ink)' }}>Photos are extremely helpful</strong> in allowing
           us to understand your project. If you do not know how to load them and would prefer to
           email them, please email them to{' '}
           <a href="mailto:webmaster@fantomworks.com">webmaster@fantomworks.com</a> separately.
@@ -1420,6 +1442,105 @@ export function SelfSubmissionForm() {
           <strong style={{ color: 'var(--ink)' }}>Save &amp; finish later</strong> (top right) — your
           progress is saved on this computer, so you can gather photos and come back to finish.
         </p>
+      </FwDialog>
+
+      {/* Estimate-confirmation gate — only shown when a parts/hours estimate was
+          entered; confirmations shown match what the customer provided. */}
+      <FwDialog
+        open={estimateOpen}
+        onClose={() => {
+          setEstimateOpen(false)
+          setPendingStep(null)
+        }}
+        title="Confirm your estimate"
+        width={540}
+        footer={
+          <>
+            <FwButton
+              variant="ghost"
+              onClick={() => {
+                setEstimateOpen(false)
+                setPendingStep(null)
+              }}
+            >
+              Back
+            </FwButton>
+            <FwButton
+              variant="primary"
+              icon={<CircleCheck size={14} />}
+              disabled={!((!needTime || confirmTime) && (!needBudget || confirmBudget))}
+              onClick={() => {
+                const target = pendingStep ?? 3
+                setEstimateOpen(false)
+                setPendingStep(null)
+                go(target)
+              }}
+            >
+              Confirm &amp; continue
+            </FwButton>
+          </>
+        }
+      >
+        {(() => {
+          const nTasks = parseTaskList(f.tasksRaw).length || 1
+          const partsNum = parseNum(f.materialsCost)
+          const hoursNum = parseNum(f.laborHours)
+          const avgParts = partsNum != null ? Math.round(partsNum / nTasks) : null
+          const avgHours = hoursNum != null ? Math.round((hoursNum / nTasks) * 10) / 10 : null
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {(avgParts != null || avgHours != null) && (
+                <div
+                  style={{
+                    padding: '12px 14px',
+                    background: 'var(--paper-sunk)',
+                    borderLeft: '3px solid var(--accent)',
+                    borderRadius: 'var(--radius-sm)',
+                    fontSize: 13.5,
+                    lineHeight: 1.55,
+                    color: 'var(--ink-2)',
+                  }}
+                >
+                  Across your{' '}
+                  <strong style={{ color: 'var(--ink)' }}>{nTasks}</strong> task
+                  {nTasks === 1 ? '' : 's'}, your estimate is for an average of{' '}
+                  {avgParts != null && (
+                    <>
+                      <strong className="tnum" style={{ color: 'var(--ink)' }}>
+                        ${avgParts.toLocaleString()}
+                      </strong>{' '}
+                      in parts
+                    </>
+                  )}
+                  {avgParts != null && avgHours != null ? ' and ' : ''}
+                  {avgHours != null && (
+                    <>
+                      <strong className="tnum" style={{ color: 'var(--ink)' }}>
+                        {avgHours}
+                      </strong>{' '}
+                      hours of labor
+                    </>
+                  )}{' '}
+                  per task.
+                </div>
+              )}
+              {needTime && (
+                <ConfirmCheck checked={confirmTime} onChange={setConfirmTime}>
+                  Please confirm that you believe this is a reasonable estimate of time necessary for
+                  a person to diagnose, research, order, receive, install, and test all parts.
+                </ConfirmCheck>
+              )}
+              {needBudget && (
+                <ConfirmCheck checked={confirmBudget} onChange={setConfirmBudget}>
+                  I also believe that my materials budget is sufficient to purchase the component
+                  including all necessary accessories, installation kits, fasteners, and misc coating
+                  and paint materials, including the costs of shipping and taxes in today&rsquo;s
+                  prices.
+                </ConfirmCheck>
+              )}
+            </div>
+          )
+        })()}
       </FwDialog>
     </div>
   )

@@ -10,6 +10,8 @@ import {
   Sun,
   ChevronLeft,
   ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
   Camera,
   Wrench,
   SlidersHorizontal,
@@ -43,6 +45,116 @@ function buildUrl(opts: { view: string; sort?: SortKey; q?: string; p?: number }
   return `/calls?${params.toString()}`
 }
 
+// Windowed page list with ellipses: always show first + last, and the current
+// page ±1. e.g. count=20, page=9 → [1,'gap',8,9,10,'gap',20].
+function pageList(page: number, count: number): (number | 'gap')[] {
+  if (count <= 7) return Array.from({ length: count }, (_, i) => i + 1)
+  const out: (number | 'gap')[] = [1]
+  const start = Math.max(2, page - 1)
+  const end = Math.min(count - 1, page + 1)
+  if (start > 2) out.push('gap')
+  for (let p = start; p <= end; p++) out.push(p)
+  if (end < count - 1) out.push('gap')
+  out.push(count)
+  return out
+}
+
+/* ── Pager — numbered pages, first/last jumps, keyboard ← →, prefetch ── */
+function Pager({
+  page,
+  pageCount,
+  onGo,
+  hrefFor,
+}: {
+  page: number
+  pageCount: number
+  onGo: (p: number) => void
+  hrefFor: (p: number) => string
+}) {
+  const router = useRouter()
+  const items = pageList(page, pageCount)
+
+  // Prefetch every page the pager can jump to in one step, so clicking (or the
+  // ← → shortcuts) resolves from cache instead of a fresh server round-trip.
+  React.useEffect(() => {
+    const targets = new Set<number>([page - 1, page + 1, 1, pageCount])
+    for (const it of items) if (typeof it === 'number') targets.add(it)
+    for (const p of targets) if (p >= 1 && p <= pageCount) router.prefetch(hrefFor(p))
+  }, [page, pageCount, router, hrefFor, items])
+
+  // Keyboard: ← / → step pages when not typing in a field.
+  React.useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (document.activeElement as HTMLElement | null)?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return
+      if (e.key === 'ArrowLeft' && page > 1) {
+        e.preventDefault()
+        onGo(page - 1)
+      } else if (e.key === 'ArrowRight' && page < pageCount) {
+        e.preventDefault()
+        onGo(page + 1)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [page, pageCount, onGo])
+
+  const numBtn = (current: boolean): React.CSSProperties => ({
+    minWidth: 32,
+    height: 32,
+    padding: '0 8px',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: current ? 'default' : 'pointer',
+    fontFamily: 'var(--font-mono)',
+    fontSize: 12.5,
+    fontWeight: current ? 700 : 500,
+    borderRadius: 'var(--radius-sm)',
+    border: `1px solid ${current ? 'var(--accent)' : 'var(--border-strong)'}`,
+    background: current ? 'var(--accent)' : 'var(--surface-card)',
+    color: current ? 'var(--text-on-accent)' : 'var(--text-body)',
+    boxShadow: current ? 'var(--shadow-sm)' : 'var(--shadow-xs)',
+  })
+
+  return (
+    <nav
+      aria-label="Pagination"
+      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 16, flexWrap: 'wrap' }}
+    >
+      <span className="tnum fw-label" style={{ letterSpacing: '.08em' }}>
+        Page {page} of {pageCount}
+      </span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <FwButton variant="secondary" size="sm" icon={<ChevronsLeft size={14} />} disabled={page <= 1} onClick={() => onGo(1)} aria-label="First page" />
+        <FwButton variant="secondary" size="sm" icon={<ChevronLeft size={14} />} disabled={page <= 1} onClick={() => onGo(page - 1)} aria-label="Previous page" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          {items.map((it, i) =>
+            it === 'gap' ? (
+              <span key={`gap-${i}`} className="tnum" style={{ minWidth: 18, textAlign: 'center', color: 'var(--faint)', fontFamily: 'var(--font-mono)', fontSize: 12 }}>
+                …
+              </span>
+            ) : (
+              <button
+                key={it}
+                onClick={() => it !== page && onGo(it)}
+                aria-label={`Page ${it}`}
+                aria-current={it === page ? 'page' : undefined}
+                style={numBtn(it === page)}
+              >
+                {it}
+              </button>
+            ),
+          )}
+        </div>
+        <FwButton variant="secondary" size="sm" icon={<ChevronRight size={14} />} disabled={page >= pageCount} onClick={() => onGo(page + 1)} aria-label="Next page" />
+        <FwButton variant="secondary" size="sm" icon={<ChevronsRight size={14} />} disabled={page >= pageCount} onClick={() => onGo(pageCount)} aria-label="Last page" />
+      </div>
+    </nav>
+  )
+}
+
+/* ── Filters popover — pick the sort field (direction is server-defined) ── */
 function FiltersPopover({
   sort,
   onPick,
@@ -646,19 +758,12 @@ export function CallConsole({
         )}
 
         {pageCount > 1 && (
-          <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 16 }}>
-            <span className="tnum fw-label" style={{ letterSpacing: '.08em' }}>
-              Page {page} of {pageCount}
-            </span>
-            <div style={{ display: 'flex', gap: 6 }}>
-              <FwButton variant="secondary" size="sm" icon={<ChevronLeft size={14} />} disabled={page <= 1} onClick={() => nav(buildUrl({ view, sort, q: search, p: page - 1 }))}>
-                Prev
-              </FwButton>
-              <FwButton variant="secondary" size="sm" iconRight={<ChevronRight size={14} />} disabled={page >= pageCount} onClick={() => nav(buildUrl({ view, sort, q: search, p: page + 1 }))}>
-                Next
-              </FwButton>
-            </div>
-          </nav>
+          <Pager
+            page={page}
+            pageCount={pageCount}
+            onGo={(p) => nav(buildUrl({ view, sort, q: search, p }))}
+            hrefFor={(p) => buildUrl({ view, sort, q: search, p })}
+          />
         )}
       </main>
 
