@@ -1,8 +1,10 @@
 'use server'
 import 'server-only'
 import { revalidatePath } from 'next/cache'
+import { after } from 'next/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { isSupabaseConfigured } from '@/lib/supabase/config'
+import { sendSubmissionConfirmation } from '@/lib/email/confirmation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { devStore } from '@/lib/data'
@@ -151,6 +153,16 @@ export async function submitSelfSubmission(input: SelfSubmissionInput): Promise<
       .from('submission_detail_stages')
       .insert(stages.map((s) => ({ submission_id: data.id, stage_key: s.key, stage_label: s.label, description: s.description, parts_cost: s.parts_cost, hours: s.hours, sort_order: s.sort_order })))
     if (stageErr) return { ok: false, error: stageErr.message }
+
+    const email = row.email as string | null
+    if (email) {
+      const submissionId = data.id as number
+      const vehicle = [input.year, input.make, input.model].map((v) => v.trim()).filter(Boolean).join(' ')
+      after(async () => {
+        const sent = await sendSubmissionConfirmation({ submissionId, email, firstName: first, vehicle })
+        if (!sent.ok) console.error('[submit] confirmation email failed', submissionId, sent.error)
+      })
+    }
   } else {
     devStore.insert(row as never, stages)
   }

@@ -6,10 +6,13 @@
 secrets/
 
 # Legacy DB dumps / customer data — PII, never commit
+exports/**/*.sql
+exports/**/*.csv
 exports/*.sql
 exports/*.csv
 exports/converted/
 exports/uploads/
+exports/pre-wipe-backup/
 # Converted dataset the app reads in dev mode — contains customer PII
 web/lib/real-data.json
 
