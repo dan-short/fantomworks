@@ -97,8 +97,11 @@ junked aggressively. `p=none` means it isn't hard-rejected — it just lands in 
 
 ## 3. Fix — in order
 
-DNS is hosted at HostMonster (`ns1/ns2.hostmonster.com`), so all record changes are made
-in the **HostMonster/Bluehost cPanel → Zone Editor**.
+> **Correction (2026-08-05):** this section assumed the zone was editable from the
+> Bluehost/HostMonster panel. It was not — that editor is read-only behind a paid
+> upsell, and the WHM zone editor on the VPS was writing to a copy that stopped being
+> authoritative in April 2025. See `07-dns-control-and-post-cutover.md`. Steps 0, 2, 3
+> and 6 below are blocked until DNS delegation moves to the VPS nameservers.
 
 ### Step 0 — Today (free, ~15 min): repair SPF
 
