@@ -2,6 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { supabaseUrl, supabasePublishableKey, isSupabaseConfigured } from './config'
 import { safeNext } from '../auth-redirect'
+import { hostRootPath } from '../host-routing'
 
 function hasAuthCookie(request: NextRequest) {
   return request.cookies
@@ -19,7 +20,19 @@ function isTransientAuthFailure(error: { name?: string; status?: number } | null
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
-  if (!isSupabaseConfigured) return supabaseResponse
+  const path = request.nextUrl.pathname
+  const rootPath = hostRootPath(request.headers.get('host'), path)
+
+  const withHostRewrite = (response: NextResponse) => {
+    if (!rootPath) return response
+    const url = request.nextUrl.clone()
+    url.pathname = rootPath
+    const rewritten = NextResponse.rewrite(url, { request })
+    response.cookies.getAll().forEach((cookie) => rewritten.cookies.set(cookie))
+    return rewritten
+  }
+
+  if (!isSupabaseConfigured) return withHostRewrite(supabaseResponse)
 
   const supabase = createServerClient(supabaseUrl!, supabasePublishableKey!, {
     cookies: {
@@ -41,16 +54,16 @@ export async function updateSession(request: NextRequest) {
     error,
   } = await supabase.auth.getUser()
 
-  const path = request.nextUrl.pathname
+  const effectivePath = rootPath ?? path
   const isPublic =
-    path.startsWith('/login') ||
-    path.startsWith('/auth') ||
-    path.startsWith('/submit') ||
-    path.startsWith('/confirm')
+    effectivePath.startsWith('/login') ||
+    effectivePath.startsWith('/auth') ||
+    effectivePath.startsWith('/submit') ||
+    effectivePath.startsWith('/confirm')
 
   if (!user && !isPublic) {
     if (hasAuthCookie(request) && isTransientAuthFailure(error)) {
-      return supabaseResponse
+      return withHostRewrite(supabaseResponse)
     }
 
     const url = request.nextUrl.clone()
@@ -61,5 +74,5 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  return supabaseResponse
+  return withHostRewrite(supabaseResponse)
 }

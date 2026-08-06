@@ -1,4 +1,4 @@
-export const DEFAULT_LANDING = '/calls'
+export const DEFAULT_LANDING = '/'
 
 export function safeNext(path: string) {
   if (!path.startsWith('/') || path.startsWith('//')) return null
