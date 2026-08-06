@@ -17,14 +17,16 @@ import {
   SlidersHorizontal,
   ArrowDown,
   Check,
+  MailPlus,
 } from 'lucide-react'
 import type { Submission, DetailsMap, SubmissionStatus } from '@/lib/types'
 import { STATUS_VIEWS } from '@/lib/types'
 import type { SortKey } from '@/lib/data'
 import { resolvePhotoUrl } from '@/lib/images'
-import { logCallAttempt, logEmailAttempt, setStatus, addNote, bump } from '@/app/actions/submissions'
+import { logCallAttempt, setStatus, addNote, bump } from '@/app/actions/submissions'
 import { signOut } from '@/app/login/actions'
 import { LeadCard, type LeadActionKey } from './LeadCard'
+import { MobileLeadRow, MobileLeadSheet } from './MobileLeads'
 import { LeadEditDialog, type EditSection } from './LeadEditDialog'
 import { PipelineNav, FwButton, FwDialog } from './primitives'
 
@@ -126,9 +128,9 @@ function Pager({
         Page {page} of {pageCount}
       </span>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <FwButton variant="secondary" size="sm" icon={<ChevronsLeft size={14} />} disabled={page <= 1} onClick={() => onGo(1)} aria-label="First page" />
-        <FwButton variant="secondary" size="sm" icon={<ChevronLeft size={14} />} disabled={page <= 1} onClick={() => onGo(page - 1)} aria-label="Previous page" />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        <FwButton className="fw-desktop-only" variant="secondary" size="sm" icon={<ChevronsLeft size={14} />} disabled={page <= 1} onClick={() => onGo(1)} aria-label="First page" />
+        <FwButton className="fw-pg-step" variant="secondary" size="sm" icon={<ChevronLeft size={14} />} disabled={page <= 1} onClick={() => onGo(page - 1)} aria-label="Previous page" />
+        <div className="fw-desktop-only" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           {items.map((it, i) =>
             it === 'gap' ? (
               <span key={`gap-${i}`} className="tnum" style={{ minWidth: 18, textAlign: 'center', color: 'var(--faint)', fontFamily: 'var(--font-mono)', fontSize: 12 }}>
@@ -147,8 +149,8 @@ function Pager({
             ),
           )}
         </div>
-        <FwButton variant="secondary" size="sm" icon={<ChevronRight size={14} />} disabled={page >= pageCount} onClick={() => onGo(page + 1)} aria-label="Next page" />
-        <FwButton variant="secondary" size="sm" icon={<ChevronsRight size={14} />} disabled={page >= pageCount} onClick={() => onGo(pageCount)} aria-label="Last page" />
+        <FwButton className="fw-pg-step" variant="secondary" size="sm" icon={<ChevronRight size={14} />} disabled={page >= pageCount} onClick={() => onGo(page + 1)} aria-label="Next page" />
+        <FwButton className="fw-desktop-only" variant="secondary" size="sm" icon={<ChevronsRight size={14} />} disabled={page >= pageCount} onClick={() => onGo(pageCount)} aria-label="Last page" />
       </div>
     </nav>
   )
@@ -344,6 +346,14 @@ export function CallConsole({
   const [confirming, setConfirming] = React.useState<Confirming | null>(null)
   const [editMode, setEditMode] = React.useState(false)
   const [editing, setEditing] = React.useState<{ lead: Submission; section: EditSection } | null>(null)
+  const [sheetId, setSheetId] = React.useState<number | null>(null)
+  const sheetLead = sheetId == null ? null : (rows.find((r) => r.id === sheetId) ?? null)
+
+  React.useEffect(() => {
+    if (window.matchMedia('(max-width: 700px)').matches && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      setNight(true)
+    }
+  }, [])
 
   const [qInput, setQInput] = React.useState(search)
   const [prevView, setPrevView] = React.useState(view)
@@ -395,7 +405,7 @@ export function CallConsole({
     if (k === 'call1') return run(() => logCallAttempt(lead.id, 1))
     if (k === 'call2') return run(() => logCallAttempt(lead.id, 2))
     if (k === 'call3') return run(() => logCallAttempt(lead.id, 3))
-    if (k === 'email') return run(() => logEmailAttempt(lead.id))
+    if (k === 'email') return nav(`/calls/${lead.id}/email`)
     if (k === 'bump') return run(() => bump(lead.id))
     return run(() => setStatus(lead.id, k as SubmissionStatus))
   }
@@ -467,7 +477,7 @@ export function CallConsole({
       )}
 
       <header style={{ position: 'sticky', top: 0, zIndex: 20, background: 'var(--steel)', boxShadow: 'var(--shadow-md)' }}>
-        <div style={{ padding: '12px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+        <div className="fw-hdr-top" style={{ padding: '12px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <Image
               src="/logo.png"
@@ -483,6 +493,7 @@ export function CallConsole({
               }}
             />
             <span
+              className="fw-hide-mobile"
               style={{
                 fontFamily: 'var(--font-display)',
                 fontWeight: 700,
@@ -496,6 +507,7 @@ export function CallConsole({
               FantomWorks
             </span>
             <span
+              className="fw-hide-mobile"
               style={{
                 fontFamily: 'var(--font-display)',
                 fontWeight: 500,
@@ -511,7 +523,7 @@ export function CallConsole({
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             {email && (
-              <span className="tnum" style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--steel-ink)', opacity: 0.8 }}>
+              <span className="tnum fw-hide-mobile" style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--steel-ink)', opacity: 0.8 }}>
                 {email}
               </span>
             )}
@@ -546,7 +558,25 @@ export function CallConsole({
                 e.currentTarget.style.borderColor = 'var(--accent)'
               }}
             >
-              <Plus size={15} /> New lead
+              <Plus size={15} /> <span className="fw-hide-mobile">New lead</span>
+            </button>
+            <button
+              onClick={() => router.push('/templates')}
+              title="Edit email templates"
+              aria-label="Email templates"
+              style={{
+                border: steelToggleBorder,
+                background: 'rgba(255,255,255,.06)',
+                color: '#fff',
+                cursor: 'pointer',
+                width: 32,
+                height: 32,
+                borderRadius: 'var(--radius-sm)',
+                display: 'grid',
+                placeItems: 'center',
+              }}
+            >
+              <MailPlus size={15} />
             </button>
             <button
               onClick={() => setNight((n) => !n)}
@@ -587,8 +617,9 @@ export function CallConsole({
           </div>
         </div>
 
-        <div style={{ padding: '0 22px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+        <div className="fw-toolbar" style={{ padding: '0 22px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
           <div
+            className="fw-pipeline"
             style={
               {
                 ['--text-muted' as string]: '#CDD1D6',
@@ -599,10 +630,11 @@ export function CallConsole({
           >
             <PipelineNav active={view} onChange={(k) => nav(buildUrl({ view: k }))} tabs={tabs} />
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <div className="fw-controls" style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
             <button
               onClick={() => setEditMode((e) => !e)}
               title="Toggle edit mode — click any part of a lead to edit it"
+              className="fw-hide-mobile"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -623,8 +655,10 @@ export function CallConsole({
             >
               <Pencil size={13} /> {editMode ? 'Editing' : 'Edit'}
             </button>
-            <SearchField value={qInput} onChange={setQInput} onClear={() => setQInput('')} />
-            <div style={{ display: 'flex', border: steelToggleBorder, borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
+            <div className="fw-searchwrap">
+              <SearchField value={qInput} onChange={setQInput} onClear={() => setQInput('')} />
+            </div>
+            <div className="fw-hide-mobile" style={{ display: 'flex', border: steelToggleBorder, borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
               {(
                 [
                   ['comfortable', 'Comfortable'],
@@ -672,7 +706,7 @@ export function CallConsole({
           </div>
         </div>
 
-        <div style={{ background: 'var(--bg-app)', borderTop: '1px solid var(--border-hairline)', boxShadow: 'var(--shadow-xs)', padding: '11px 22px 9px' }}>
+        <div className="fw-summary" style={{ background: 'var(--bg-app)', borderTop: '1px solid var(--border-hairline)', boxShadow: 'var(--shadow-xs)', padding: '11px 22px 9px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
               <span style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 600, letterSpacing: '.04em', textTransform: 'uppercase', color: 'var(--ink)' }}>
@@ -683,7 +717,7 @@ export function CallConsole({
                 {pageCount > 1 && <span style={{ color: 'var(--faint)' }}> · showing {first}–{last}</span>}
               </span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--faint)' }}>
+            <div className="fw-hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--faint)' }}>
               <span className="fw-label" style={{ marginRight: 2 }}>
                 Sorted by
               </span>
@@ -693,7 +727,7 @@ export function CallConsole({
             </div>
           </div>
           {density === 'comfortable' && rows.length > 0 && (
-            <div style={{ display: 'flex', paddingLeft: 4, marginTop: 9 }}>
+            <div className="fw-desktop-only" style={{ display: 'flex', paddingLeft: 4, marginTop: 9 }}>
               <div style={{ width: 4 }} />
               <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '0.68fr 128px 1.95fr 0.8fr' }}>
                 {['Customer', 'Photos', 'Project & Estimate', 'Activity'].map((h) => (
@@ -707,29 +741,38 @@ export function CallConsole({
         </div>
       </header>
 
-      <main className="app-scroll" style={{ flex: 1, padding: '14px 22px 40px', width: '100%', opacity: pending ? 0.6 : 1, transition: 'opacity .12s ease' }}>
+      <main className="app-scroll fw-main" style={{ flex: 1, padding: '14px 22px 40px', width: '100%', opacity: pending ? 0.6 : 1, transition: 'opacity .12s ease' }}>
         {rows.length > 0 ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: density === 'compact' ? 7 : 12 }}>
-            {rows.map((l) => (
-              <LeadCard
-                key={l.id}
-                lead={l}
-                stages={details[l.id] ?? []}
-                compact={density === 'compact'}
-                selected={sel.has(l.id)}
-                editMode={editMode}
-                onEditSection={(lead, section) => setEditing({ lead, section })}
-                onToggleSelect={toggleSel}
-                onAction={onAction}
-                onAddNote={(lead) => {
-                  setNoteFor(lead)
-                  setNoteText('')
-                }}
-                onOpenPhotos={(lead, idx) => setPhotos({ lead, idx })}
-                onConfirm={onConfirm}
-              />
-            ))}
-          </div>
+          <>
+            <div className="fw-desktop-only" style={{ display: 'flex', flexDirection: 'column', gap: density === 'compact' ? 7 : 12 }}>
+              {rows.map((l) => (
+                <LeadCard
+                  key={l.id}
+                  lead={l}
+                  stages={details[l.id] ?? []}
+                  compact={density === 'compact'}
+                  selected={sel.has(l.id)}
+                  editMode={editMode}
+                  onEditSection={(lead, section) => setEditing({ lead, section })}
+                  onToggleSelect={toggleSel}
+                  onAction={onAction}
+                  onAddNote={(lead) => {
+                    setNoteFor(lead)
+                    setNoteText('')
+                  }}
+                  onOpenPhotos={(lead, idx) => setPhotos({ lead, idx })}
+                  onConfirm={onConfirm}
+                />
+              ))}
+            </div>
+            <div className="fw-mobile-only">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {rows.map((l) => (
+                  <MobileLeadRow key={l.id} lead={l} onOpen={(lead) => setSheetId(lead.id)} />
+                ))}
+              </div>
+            </div>
+          </>
         ) : (
           <div
             style={{
@@ -762,6 +805,22 @@ export function CallConsole({
           />
         )}
       </main>
+
+      {sheetLead && (
+        <MobileLeadSheet
+          lead={sheetLead}
+          stages={details[sheetLead.id] ?? []}
+          onClose={() => setSheetId(null)}
+          onAction={(k) => onAction(sheetLead, k)}
+          onAddNote={() => {
+            setNoteFor(sheetLead)
+            setNoteText('')
+          }}
+          onOpenPhotos={(idx) => setPhotos({ lead: sheetLead, idx })}
+          onConfirm={(item) => onConfirm(sheetLead, item)}
+          onEditSection={(section) => setEditing({ lead: sheetLead, section })}
+        />
+      )}
 
       {editing && (
         <LeadEditDialog

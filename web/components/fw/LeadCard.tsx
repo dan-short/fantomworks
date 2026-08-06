@@ -35,11 +35,11 @@ import {
   relAge,
 } from './primitives'
 
-const SHOP_RATE = 150
+export const SHOP_RATE = 150
 
 export type LeadActionKey = 'call1' | 'call2' | 'call3' | 'email' | 'bump' | SubmissionStatus
 
-function lastContact(s: Submission): string | null {
+export function lastContact(s: Submission): string | null {
   const ds = [s.call_attempt_one, s.call_attempt_two, s.call_attempt_three, s.email_attempt]
     .filter((d): d is string => Boolean(d))
     .map((d) => new Date(d).getTime())
@@ -90,29 +90,49 @@ function AttemptRow({
   label,
   icon,
   onLog,
+  reopen,
 }: {
   done: string | null
   label: string
   icon: React.ReactNode
   onLog: () => void
+  reopen?: boolean
 }) {
   if (done) {
-    return (
-      <div
-        className="tnum"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 7,
-          fontSize: 12,
-          color: 'var(--ink-2)',
-          fontFamily: 'var(--font-mono)',
-          padding: '4px 2px',
-        }}
-      >
+    const content = (
+      <>
         <span style={{ color: 'var(--age-fresh)', display: 'flex' }}>{icon}</span>
         {label} · {fmtDate(done)}
-      </div>
+      </>
+    )
+    const rowStyle: React.CSSProperties = {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 7,
+      fontSize: 12,
+      color: 'var(--ink-2)',
+      fontFamily: 'var(--font-mono)',
+      padding: '4px 2px',
+    }
+    if (!reopen) {
+      return (
+        <div className="tnum" style={rowStyle}>
+          {content}
+        </div>
+      )
+    }
+    return (
+      <button
+        className="tnum"
+        onClick={onLog}
+        title={`${label} sent — write another`}
+        style={{ ...rowStyle, width: '100%', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left' }}
+        onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--paper-sunk)')}
+        onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+      >
+        {content}
+        <ChevronRight size={12} style={{ marginLeft: 'auto', color: 'var(--faint)' }} />
+      </button>
     )
   }
   return (
@@ -158,7 +178,7 @@ function Selector({ selected, onToggle }: { selected: boolean; onToggle?: () => 
   )
 }
 
-type MenuItem = {
+export type LeadMenuItem = {
   k: LeadActionKey
   label: string
   icon: React.ReactNode
@@ -166,6 +186,16 @@ type MenuItem = {
   danger?: boolean
   confirm?: string
 }
+
+export const LEAD_MENU: LeadMenuItem[] = [
+  { k: 'pending', label: 'Move to Pending', icon: <Clock size={14} /> },
+  { k: 'active', label: 'Move to Active', icon: <CircleCheck size={14} /> },
+  { k: 'possible', label: 'Move to Possible', icon: <CircleHelp size={14} /> },
+  { k: 'finished', label: 'Mark Finished', icon: <CircleCheck size={14} /> },
+  { k: 'new', label: 'Back to Call Log', icon: <Undo size={14} />, divider: true },
+  { k: 'archived', label: 'Archive', icon: <Archive size={14} />, confirm: 'It moves to Archives and leaves this view. You can still find it later.' },
+  { k: 'deleted', label: 'Delete', icon: <Trash2 size={14} />, danger: true, confirm: 'It will be removed from the active pipeline.' },
+]
 
 function Kebab({
   onAction,
@@ -175,15 +205,7 @@ function Kebab({
   onConfirm: (item: { k: LeadActionKey; label: string; message: string; danger?: boolean }) => void
 }) {
   const [menu, setMenu] = React.useState(false)
-  const items: MenuItem[] = [
-    { k: 'pending', label: 'Move to Pending', icon: <Clock size={14} /> },
-    { k: 'active', label: 'Move to Active', icon: <CircleCheck size={14} /> },
-    { k: 'possible', label: 'Move to Possible', icon: <CircleHelp size={14} /> },
-    { k: 'finished', label: 'Mark Finished', icon: <CircleCheck size={14} /> },
-    { k: 'new', label: 'Back to Call Log', icon: <Undo size={14} />, divider: true },
-    { k: 'archived', label: 'Archive', icon: <Archive size={14} />, confirm: 'It moves to Archives and leaves this view. You can still find it later.' },
-    { k: 'deleted', label: 'Delete', icon: <Trash2 size={14} />, danger: true, confirm: 'It will be removed from the active pipeline.' },
-  ]
+  const items = LEAD_MENU
   return (
     <div style={{ position: 'relative' }}>
       <FwButton
@@ -744,7 +766,7 @@ export function LeadCard({
                 <AttemptRow done={lead.call_attempt_one} label="Call 1" icon={<Phone size={13} />} onLog={() => act('call1')} />
                 <AttemptRow done={lead.call_attempt_two} label="Call 2" icon={<Phone size={13} />} onLog={() => act('call2')} />
                 <AttemptRow done={lead.call_attempt_three} label="Call 3" icon={<Phone size={13} />} onLog={() => act('call3')} />
-                <AttemptRow done={lead.email_attempt} label="Email" icon={<Mail size={13} />} onLog={() => act('email')} />
+                <AttemptRow done={lead.email_attempt} label="Email" icon={<Mail size={13} />} onLog={() => act('email')} reopen />
               </div>
             </div>
             <Kebab onAction={act} onConfirm={confirm} />
