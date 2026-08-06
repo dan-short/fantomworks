@@ -201,6 +201,7 @@ export function FwButton({
     borderRadius: 'var(--radius-sm)',
     cursor: disabled ? 'not-allowed' : 'pointer',
     opacity: disabled ? 0.5 : 1,
+    maxWidth: '100%',
     whiteSpace: 'nowrap',
     transition: 'background .12s ease, border-color .12s ease, color .12s ease, transform .05s ease',
     userSelect: 'none',
@@ -350,8 +351,9 @@ export function FwDialog({
         background: 'rgba(23,25,28,.55)',
         backdropFilter: 'blur(2px)',
         display: 'grid',
+        gridTemplateColumns: 'minmax(0, 1fr)',
         placeItems: 'center',
-        padding: 24,
+        padding: 'clamp(12px, 4vw, 24px)',
       }}
     >
       <div
@@ -409,6 +411,7 @@ export function FwDialog({
             style={{
               display: 'flex',
               justifyContent: 'flex-end',
+              flexWrap: 'wrap',
               gap: 8,
               padding: '12px 18px',
               borderTop: '1px solid var(--border-hairline)',

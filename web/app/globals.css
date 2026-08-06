@@ -245,6 +245,95 @@ body {
   cursor: pointer;
 }
 
+.fw .fw-submit-header {
+  padding: 12px 22px;
+  gap: 16px;
+}
+
+.fw .fw-submit-main {
+  padding: 24px 22px 44px;
+}
+
+.fw .fw-submit-card {
+  padding: 24px 26px 26px;
+  overflow-wrap: break-word;
+}
+
+.fw .fw-grid-2 {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+}
+
+.fw .fw-grid-3 {
+  display: grid;
+  grid-template-columns: minmax(0, 0.6fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+}
+
+.fw .fw-grid-storage {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
+.fw .fw-step-bar {
+  flex: 0 0 26px;
+  height: 2px;
+  margin: 0 6px;
+  border-radius: 2px;
+}
+
+.fw .fw-review-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-hairline);
+}
+
+.fw .fw-review-val {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 560px) {
+  .fw .fw-submit-header {
+    padding: 10px 14px;
+    gap: 10px;
+  }
+  .fw .fw-submit-main {
+    padding: 16px 12px 36px;
+  }
+  .fw .fw-submit-card {
+    padding: 18px 15px 20px;
+  }
+  .fw .fw-grid-2,
+  .fw .fw-grid-3,
+  .fw .fw-grid-storage {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+  .fw .fw-step-label {
+    display: none;
+  }
+  .fw .fw-step-bar {
+    flex-basis: 10px;
+    margin: 0 2px;
+  }
+  .fw .fw-review-row {
+    flex-wrap: wrap;
+    row-gap: 6px;
+  }
+  .fw .fw-review-row .fw-review-val {
+    flex: 1 1 100%;
+    order: 3;
+  }
+  .fw .fw-review-row .fw-review-edit {
+    margin-left: auto;
+  }
+}
+
 @keyframes fw-spin {
   to {
     transform: rotate(360deg);

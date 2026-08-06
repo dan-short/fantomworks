@@ -195,10 +195,12 @@ function WhyAsk({ children }: { children: React.ReactNode }) {
         <span
           style={{
             position: 'absolute',
-            left: 0,
+            left: '50%',
+            transform: 'translateX(-50%)',
             top: 'calc(100% + 6px)',
             zIndex: 20,
             width: 250,
+            maxWidth: 'calc(100vw - 32px)',
             background: 'var(--steel)',
             color: 'var(--steel-ink)',
             fontSize: 12,
@@ -277,12 +279,14 @@ function Stepper({
                 {done ? <CircleCheck size={15} /> : <Icon size={14} />}
               </span>
               <span
+                className={on ? undefined : 'fw-step-label'}
                 style={{
                   fontFamily: 'var(--font-display)',
                   fontSize: 12,
                   fontWeight: 600,
                   letterSpacing: '.08em',
                   textTransform: 'uppercase',
+                  whiteSpace: 'nowrap',
                   color,
                 }}
               >
@@ -291,12 +295,9 @@ function Stepper({
             </button>
             {i < STEPS.length - 1 && (
               <span
+                className="fw-step-bar"
                 style={{
-                  flex: '0 0 26px',
-                  height: 2,
                   background: i < step ? 'var(--age-fresh)' : 'var(--border-hairline)',
-                  margin: '0 6px',
-                  borderRadius: 2,
                 }}
               />
             )}
@@ -460,8 +461,17 @@ export function SelfSubmissionForm() {
       ['Photos', f.photos.length ? `${f.photos.length} attached` : 'None'],
     ]
     return (
-      <div className="fw" style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: 24 }}>
-        <div style={{ textAlign: 'center', maxWidth: 520 }}>
+      <div
+        className="fw"
+        style={{
+          minHeight: '100vh',
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0, 1fr)',
+          placeItems: 'center',
+          padding: 'clamp(14px, 4vw, 24px)',
+        }}
+      >
+        <div style={{ textAlign: 'center', maxWidth: 520, width: '100%', overflowWrap: 'break-word' }}>
           <div
             style={{
               width: 64,
@@ -546,11 +556,11 @@ export function SelfSubmissionForm() {
                 >
                   {k}
                 </span>
-                <span style={{ color: 'var(--ink-2)' }}>{v}</span>
+                <span style={{ flex: 1, minWidth: 0, color: 'var(--ink-2)' }}>{v}</span>
               </div>
             ))}
           </div>
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
             <FwButton variant="secondary" icon={<StickyNote size={14} />} onClick={() => window.print()}>
               Print / save a copy
             </FwButton>
@@ -575,8 +585,17 @@ export function SelfSubmissionForm() {
 
   if (savedLater) {
     return (
-      <div className="fw" style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: 24 }}>
-        <div style={{ textAlign: 'center', maxWidth: 460 }}>
+      <div
+        className="fw"
+        style={{
+          minHeight: '100vh',
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0, 1fr)',
+          placeItems: 'center',
+          padding: 'clamp(14px, 4vw, 24px)',
+        }}
+      >
+        <div style={{ textAlign: 'center', maxWidth: 460, width: '100%', overflowWrap: 'break-word' }}>
           <div
             style={{
               width: 64,
@@ -622,22 +641,25 @@ export function SelfSubmissionForm() {
     return (
       <div className="fw" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
         <SubmitHeader />
-        <main style={{ flex: 1, width: '100%', maxWidth: 760, margin: '0 auto', padding: '26px 22px 44px' }}>
+        <main
+          className="fw-submit-main"
+          style={{ flex: 1, width: '100%', maxWidth: 760, margin: '0 auto', minWidth: 0 }}
+        >
           <div
+            className="fw-submit-card"
             style={{
               background: 'var(--surface-card)',
               border: '1px solid var(--border-hairline)',
               borderTop: '3px solid var(--accent)',
               borderRadius: 'var(--radius-lg)',
               boxShadow: 'var(--shadow-sm)',
-              padding: '26px 28px 28px',
             }}
           >
             <h1
               style={{
                 margin: '0 0 4px',
                 fontFamily: 'var(--font-display)',
-                fontSize: 26,
+                fontSize: 'clamp(21px, 6vw, 26px)',
                 fontWeight: 600,
                 letterSpacing: '.02em',
                 textTransform: 'uppercase',
@@ -701,12 +723,27 @@ export function SelfSubmissionForm() {
                 area code, please call back at your earliest opportunity.
               </p>
             </div>
-            <div style={{ marginTop: 22, display: 'flex', justifyContent: 'flex-end' }}>
+            <div
+              style={{
+                marginTop: 22,
+                display: 'flex',
+                flexWrap: 'wrap',
+                justifyContent: 'flex-end',
+              }}
+            >
               <FwButton
                 variant="primary"
                 size="lg"
-                iconRight={<ChevronRight size={16} />}
+                iconRight={<ChevronRight size={16} style={{ flexShrink: 0 }} />}
                 onClick={() => setStarted(true)}
+                style={{
+                  height: 'auto',
+                  minHeight: 44,
+                  padding: '11px 18px',
+                  whiteSpace: 'normal',
+                  textAlign: 'center',
+                  lineHeight: 1.3,
+                }}
               >
                 I understand — start my submission
               </FwButton>
@@ -765,12 +802,13 @@ export function SelfSubmissionForm() {
       />
 
       <main
+        className="fw-submit-main"
         style={{
           flex: 1,
           width: '100%',
           maxWidth: 760,
+          minWidth: 0,
           margin: '0 auto',
-          padding: '22px 22px 40px',
           display: 'flex',
           flexDirection: 'column',
           gap: 18,
@@ -779,13 +817,14 @@ export function SelfSubmissionForm() {
         <Stepper step={step} setStep={requestStep} maxReached={maxReached} />
 
         <section
+          className="fw-submit-card"
           style={{
             background: 'var(--surface-card)',
             border: '1px solid var(--border-hairline)',
             borderRadius: 'var(--radius-lg)',
             boxShadow: 'var(--shadow-sm)',
-            padding: '22px 22px 24px',
             minHeight: 340,
+            minWidth: 0,
             display: 'flex',
             flexDirection: 'column',
           }}
@@ -881,7 +920,7 @@ export function SelfSubmissionForm() {
                   make.
                 </p>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '0.6fr 1fr 1fr', gap: 16 }}>
+              <div className="fw-grid-3">
                 <Field label="Year">
                   <input
                     className="fw-field tnum"
@@ -1291,26 +1330,18 @@ export function SelfSubmissionForm() {
                   ],
                 ] as [string, string, number][]
               ).map(([k, v, s], i) => (
-                <div
-                  key={i}
-                  style={{
-                    display: 'flex',
-                    gap: 14,
-                    alignItems: 'flex-start',
-                    padding: '12px 0',
-                    borderBottom: '1px solid var(--border-hairline)',
-                  }}
-                >
+                <div key={i} className="fw-review-row">
                   <span className="fw-label" style={{ width: 86, flexShrink: 0, paddingTop: 2 }}>
                     {k}
                   </span>
                   <span
+                    className="fw-review-val"
                     style={{
-                      flex: 1,
                       fontSize: 13.5,
                       color: 'var(--ink-2)',
                       lineHeight: 1.55,
                       whiteSpace: 'pre-wrap',
+                      overflowWrap: 'break-word',
                       textWrap: 'pretty',
                     }}
                   >
@@ -1318,8 +1349,10 @@ export function SelfSubmissionForm() {
                   </span>
                   <button
                     type="button"
+                    className="fw-review-edit"
                     onClick={() => go(s)}
                     style={{
+                      flexShrink: 0,
                       border: 'none',
                       background: 'transparent',
                       cursor: 'pointer',
@@ -1583,7 +1616,7 @@ function SubmitHeader({
       style={{
         fontFamily: 'var(--font-display)',
         fontWeight: 700,
-        fontSize: 20,
+        fontSize: 'clamp(16px, 4.6vw, 20px)',
         letterSpacing: '.03em',
         textTransform: 'uppercase',
         color: '#fff',
@@ -1611,17 +1644,17 @@ function SubmitHeader({
   )
   return (
     <header
+      className="fw-submit-header"
       style={{
         background: 'var(--steel)',
         boxShadow: 'var(--shadow-md)',
-        padding: '12px 22px',
         display: 'flex',
         alignItems: 'center',
+        flexWrap: 'wrap',
         justifyContent: action ? 'space-between' : 'flex-start',
-        gap: 16,
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 12, minWidth: 0 }}>
         <Image
           src="/logo.png"
           alt="FantomWorks"

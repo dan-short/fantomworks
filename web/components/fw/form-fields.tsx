@@ -53,7 +53,7 @@ export function Err({ show, children }: { show?: boolean | string; children: Rea
 }
 
 export function Row2({ children }: { children: React.ReactNode }) {
-  return <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>{children}</div>
+  return <div className="fw-grid-2">{children}</div>
 }
 
 export function PrefixInput({
@@ -177,7 +177,7 @@ export function StorageField({
   return (
     <div>
       <Label req={req}>How has the vehicle been stored?</Label>
-      <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 10 }}>
+      <div className="fw-grid-storage">
         <select
           className="fw-field"
           value={selectValue}
