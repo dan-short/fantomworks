@@ -362,6 +362,11 @@ body {
 .fw .fw-mail-preview {
   position: sticky;
   top: 122px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-height: calc(100dvh - 140px);
+  overflow-y: auto;
 }
 
 @media (min-width: 901px) {
@@ -379,11 +384,17 @@ body {
   }
   .fw .fw-mail-preview {
     position: static;
+    gap: 14px;
+    max-height: none;
+    overflow: visible;
   }
-  .fw [data-pane='write'] .fw-mail-pane-preview {
+  .fw [data-pane='write'] .fw-mail-pane-preview,
+  .fw [data-pane='preview'] .fw-mail-pane-write,
+  .fw [data-pane='details'] .fw-mail-pane-write {
     display: none;
   }
-  .fw [data-pane='preview'] .fw-mail-pane-write {
+  .fw [data-pane='preview'] .fw-mail-card-details,
+  .fw [data-pane='details'] .fw-mail-card-preview {
     display: none;
   }
 }
@@ -395,6 +406,10 @@ body {
   }
   .fw .fw-mail-header > :nth-child(2) {
     order: -1;
+    flex-basis: 100%;
+  }
+  .fw .fw-mail-header .fw-mail-tabs-wide {
+    order: 1;
     flex-basis: 100%;
   }
   .fw .fw-mail-substrip {

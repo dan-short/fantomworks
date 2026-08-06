@@ -13,9 +13,11 @@ import {
   CircleCheck,
   RotateCcw,
   Check,
+  ClipboardList,
 } from 'lucide-react'
 import type { DetailStage, Submission } from '@/lib/types'
 import { STATUS_VIEWS } from '@/lib/types'
+import { resolvePhotoUrl } from '@/lib/images'
 import { TEMPLATE_GROUPS, TOKENS, applyTemplate, tokensFor, type EmailTemplate } from '@/lib/email/templates'
 import { composeSections, isSendable, type EmailParts } from '@/lib/email/compose'
 import { fillEstimate } from '@/lib/email/estimate'
@@ -171,6 +173,244 @@ function Preview({ to, from, parts }: { to: string; from: string; parts: EmailPa
   )
 }
 
+function FactRow({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <>
+      <span style={{ color: 'var(--faint)' }}>{label}</span>
+      <span style={{ color: 'var(--ink-2)', overflowWrap: 'anywhere' }}>{value}</span>
+    </>
+  )
+}
+
+function DetailBlock({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div style={{ marginTop: 14 }}>
+      <span className="fw-label" style={{ display: 'block', marginBottom: 5 }}>
+        {label}
+      </span>
+      {children}
+    </div>
+  )
+}
+
+function LeadDetails({ lead, stages }: { lead: Submission; stages: DetailStage[] }) {
+  const vehicle = [lead.year, lead.make, lead.model].filter(Boolean).join(' ')
+  const online = (lead.added_by ?? '').toLowerCase().includes('online')
+  const loc =
+    [lead.city, lead.state_country].filter(Boolean).join(', ') +
+    (lead.distance_miles != null ? ` · ${lead.distance_miles} mi` : '')
+  const storageLine = lead.storage_type
+    ? `${lead.storage_type}${lead.storage_years != null ? ` · ${lead.storage_years} yr` : ''}`
+    : null
+
+  const totalHours = stages.reduce((s, x) => s + (x.hours || 0), 0)
+  const totalParts = stages.reduce((s, x) => s + (x.parts_cost || 0), 0)
+  const estTotal = totalParts + totalHours * SHOP_RATE
+
+  const photos = (lead.images ?? [])
+    .map((p, i) => lead.image_urls?.[i] || resolvePhotoUrl(p))
+    .filter((u): u is string => Boolean(u))
+
+  const facts: [string, string][] = []
+  if (lead.budget != null) facts.push(['Budget', `$${lead.budget.toLocaleString('en-US')}`])
+  if (lead.project_start) facts.push(['Start', lead.project_start])
+  if (storageLine) facts.push(['Stored', storageLine])
+  if (loc.trim()) facts.push(['Location', loc])
+  facts.push(['Received', fmtDate(lead.received_date)])
+
+  return (
+    <SectionCard
+      title="Their submission"
+      aside={
+        <span
+          className="tnum"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--faint)' }}
+        >
+          <ClipboardList size={12} /> #{lead.legacy_id}
+        </span>
+      }
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 15, fontWeight: 600, color: 'var(--ink)' }}>
+        <Car size={16} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+        <span style={{ overflowWrap: 'anywhere' }}>{vehicle || 'No vehicle on file'}</span>
+      </div>
+
+      <div
+        className="tnum"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'auto minmax(0, 1fr)',
+          gap: '4px 12px',
+          marginTop: 12,
+          paddingTop: 12,
+          borderTop: '1px dashed var(--border-strong)',
+          fontFamily: 'var(--font-mono)',
+          fontSize: 12,
+        }}
+      >
+        {facts.map(([k, v]) => (
+          <FactRow key={k} label={k} value={v} />
+        ))}
+      </div>
+
+      {photos.length > 0 && (
+        <DetailBlock label={`Photos (${photos.length})`}>
+          <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2 }}>
+            {photos.map((src, i) => (
+              <a
+                key={i}
+                href={src}
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  position: 'relative',
+                  width: 84,
+                  height: 60,
+                  flexShrink: 0,
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid var(--border-strong)',
+                  overflow: 'hidden',
+                  display: 'block',
+                }}
+              >
+                <Image
+                  src={src}
+                  alt={`Photo ${i + 1}`}
+                  fill
+                  sizes="84px"
+                  unoptimized={/^(blob:|data:)/.test(src)}
+                  style={{ objectFit: 'cover' }}
+                />
+              </a>
+            ))}
+          </div>
+        </DetailBlock>
+      )}
+
+      {lead.project_description && (
+        <DetailBlock label="Description">
+          <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.55, color: 'var(--ink-2)', textWrap: 'pretty', whiteSpace: 'pre-wrap' }}>
+            {lead.project_description}
+          </p>
+        </DetailBlock>
+      )}
+
+      {lead.restoration_decision_matrix && (
+        <DetailBlock label="Decision matrix">
+          <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.55, color: 'var(--ink-2)', textWrap: 'pretty', whiteSpace: 'pre-wrap' }}>
+            {lead.restoration_decision_matrix}
+          </p>
+        </DetailBlock>
+      )}
+
+      {stages.length > 0 && (
+        <DetailBlock label={online ? 'Estimate / Tasks' : 'Work Requested'}>
+          <div style={{ borderTop: '1px solid var(--border-hairline)' }}>
+            {stages.map((st, i) => (
+              <div
+                key={i}
+                style={{
+                  display: 'flex',
+                  alignItems: 'baseline',
+                  gap: 8,
+                  fontSize: 12,
+                  padding: '5px 0',
+                  borderBottom: '1px solid var(--border-hairline)',
+                }}
+              >
+                {online && (
+                  <span
+                    style={{
+                      fontFamily: 'var(--font-display)',
+                      fontSize: 10,
+                      fontWeight: 600,
+                      letterSpacing: '.08em',
+                      textTransform: 'uppercase',
+                      color: 'var(--steel)',
+                      width: 74,
+                      flexShrink: 0,
+                    }}
+                  >
+                    {st.label}
+                  </span>
+                )}
+                <span style={{ flex: 1, color: 'var(--muted)', lineHeight: 1.5, textWrap: 'pretty' }}>{st.description}</span>
+                {online && (
+                  <span className="tnum" style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, color: 'var(--faint)', whiteSpace: 'nowrap' }}>
+                    {st.parts_cost ? `$${st.parts_cost.toLocaleString('en-US')}` : ''}
+                    {st.hours ? ` · ${st.hours}h` : ''}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+          {online && (
+            <div
+              className="tnum"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 10,
+                flexWrap: 'wrap',
+                marginTop: 8,
+                padding: '8px 10px',
+                background: 'var(--paper-sunk)',
+                borderRadius: 'var(--radius-sm)',
+                fontFamily: 'var(--font-mono)',
+                fontSize: 11.5,
+                color: 'var(--muted)',
+              }}
+            >
+              <span
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: 10,
+                  fontWeight: 600,
+                  letterSpacing: '.1em',
+                  textTransform: 'uppercase',
+                  color: 'var(--steel)',
+                }}
+              >
+                Est. Total
+              </span>
+              <span style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
+                <span>
+                  {totalHours}h (${(totalHours * SHOP_RATE).toLocaleString('en-US')})
+                </span>
+                <span style={{ color: 'var(--faint)' }}>·</span>
+                <span>${totalParts.toLocaleString('en-US')} parts</span>
+                <span style={{ color: 'var(--faint)' }}>≈</span>
+                <span style={{ color: 'var(--ink)', fontWeight: 600 }}>${estTotal.toLocaleString('en-US')}</span>
+              </span>
+            </div>
+          )}
+        </DetailBlock>
+      )}
+
+      {lead.notes && (
+        <DetailBlock label="Notes">
+          <p
+            style={{
+              margin: 0,
+              fontSize: 12,
+              lineHeight: 1.5,
+              color: 'var(--ink-2)',
+              background: 'var(--paper-sunk)',
+              padding: '7px 9px',
+              borderRadius: 'var(--radius-sm)',
+              borderLeft: '2px solid var(--steel)',
+              whiteSpace: 'pre-wrap',
+            }}
+          >
+            {lead.notes}
+          </p>
+        </DetailBlock>
+      )}
+    </SectionCard>
+  )
+}
+
 function SentHistory({ history }: { history: SentEmail[] }) {
   const [openId, setOpenId] = React.useState<number | null>(null)
   return (
@@ -269,7 +509,7 @@ export function EmailComposer({
   const [pristine, setPristine] = React.useState<EmailParts>(initial)
   const [to, setTo] = React.useState(lead.email ?? '')
 
-  const [pane, setPane] = React.useState<'write' | 'preview'>('write')
+  const [pane, setPane] = React.useState<'write' | 'preview' | 'details'>('write')
   const [confirmSwitch, setConfirmSwitch] = React.useState<string | null>(null)
   const [confirmSend, setConfirmSend] = React.useState(false)
   const [applyStatus, setApplyStatus] = React.useState<boolean>(Boolean(first?.suggestedStatus))
@@ -455,17 +695,19 @@ export function EmailComposer({
             </span>
           </div>
 
-          <div className="fw-mail-tabs" style={{ display: 'flex', border: '1px solid rgba(255,255,255,.2)', borderRadius: 'var(--radius-sm)', overflow: 'hidden', flexShrink: 0 }}>
+          <div className="fw-mail-tabs fw-mail-tabs-wide" style={{ display: 'flex', border: '1px solid rgba(255,255,255,.2)', borderRadius: 'var(--radius-sm)', overflow: 'hidden', flexShrink: 0 }}>
             {(
               [
                 ['write', 'Write'],
                 ['preview', 'Preview'],
+                ['details', 'Details'],
               ] as const
             ).map(([k, lbl]) => (
               <button
                 key={k}
                 onClick={() => setPane(k)}
                 style={{
+                  flex: 1,
                   border: 'none',
                   cursor: 'pointer',
                   padding: '7px 12px',
@@ -647,16 +889,21 @@ export function EmailComposer({
         </div>
 
         <div className="fw-mail-pane-preview fw-mail-preview" style={{ minWidth: 0 }}>
-          <SectionCard
-            title="Preview"
-            aside={
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--faint)' }}>
-                <Mail size={12} /> what the customer receives
-              </span>
-            }
-          >
-            <Preview to={to} from={fromLabel} parts={parts} />
-          </SectionCard>
+          <div className="fw-mail-card-preview">
+            <SectionCard
+              title="Preview"
+              aside={
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--faint)' }}>
+                  <Mail size={12} /> what the customer receives
+                </span>
+              }
+            >
+              <Preview to={to} from={fromLabel} parts={parts} />
+            </SectionCard>
+          </div>
+          <div className="fw-mail-card-details">
+            <LeadDetails lead={lead} stages={stages} />
+          </div>
         </div>
       </main>
 
