@@ -120,7 +120,7 @@ export async function logEmailAttempt(id: number) {
 }
 
 export async function setStatus(id: number, status: SubmissionStatus) {
-  await apply(id, { status })
+  await apply(id, isSupabaseConfigured ? { status } : { status, status_changed_at: new Date().toISOString() })
 }
 
 export async function addNote(id: number, note: string) {

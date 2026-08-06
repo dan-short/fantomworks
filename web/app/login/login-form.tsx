@@ -1,12 +1,51 @@
 'use client'
-import { useActionState } from 'react'
+import { startTransition, useActionState, useEffect, useRef, useState } from 'react'
 import { signIn, type LoginState } from './actions'
+import { clearSavedLogin, readSavedLogin, saveLogin } from '@/lib/saved-login'
 
 export function LoginForm({ next }: { next: string }) {
   const [state, formAction, pending] = useActionState<LoginState, FormData>(signIn, {})
+  const [autoSigningIn, setAutoSigningIn] = useState(false)
+  const attempted = useRef(false)
+
+  useEffect(() => {
+    if (attempted.current) return
+    attempted.current = true
+    const saved = readSavedLogin()
+    if (!saved) return
+    setAutoSigningIn(true)
+    const fd = new FormData()
+    fd.set('next', next)
+    fd.set('email', saved.email)
+    fd.set('password', saved.password)
+    startTransition(() => formAction(fd))
+  }, [next, formAction])
+
+  useEffect(() => {
+    if (!state.error) return
+    if (/invalid/i.test(state.error)) clearSavedLogin()
+    setAutoSigningIn(false)
+  }, [state.error])
+
+  if (autoSigningIn) {
+    return (
+      <p className="py-8 text-center text-sm text-stone-500" role="status">
+        Signing you back in…
+      </p>
+    )
+  }
 
   return (
-    <form action={formAction} className="space-y-4">
+    <form
+      action={formAction}
+      onSubmit={(e) => {
+        const fd = new FormData(e.currentTarget)
+        const email = String(fd.get('email') ?? '').trim()
+        const password = String(fd.get('password') ?? '')
+        if (email && password) saveLogin({ email, password })
+      }}
+      className="space-y-4"
+    >
       <input type="hidden" name="next" value={next} />
       <div>
         <label htmlFor="email" className="mb-1 block text-sm text-stone-600">

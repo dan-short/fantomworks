@@ -38,7 +38,7 @@ export async function sendLeadEmail(input: SendLeadEmailInput): Promise<SendResu
   if (!isSupabaseConfigured) {
     devStore.update(input.submissionId, {
       email_attempt: new Date().toISOString(),
-      ...(applyStatus ? { status: applyStatus } : {}),
+      ...(applyStatus ? { status: applyStatus, status_changed_at: new Date().toISOString() } : {}),
     })
     revalidatePath('/calls')
     return { ok: true }

@@ -88,7 +88,7 @@ const SELECT_COLS = [
   'street', 'zipcode', 'city', 'state_country', 'time_zone', 'distance_miles',
   'year', 'make', 'model', 'budget', 'project_start', 'project_description',
   'restoration_decision_matrix', 'storage_type', 'storage_years',
-  'status', 'received_date', 'original_date', 'bumped_at', 'added_by', 'notes',
+  'status', 'status_changed_at', 'received_date', 'original_date', 'bumped_at', 'added_by', 'notes',
   'call_attempt_one', 'call_attempt_two', 'call_attempt_three', 'email_attempt',
   'image_name_1', 'image_name_2', 'image_name_3', 'image_name_4',
 ].join(', ')
@@ -101,7 +101,11 @@ function orIlikeFilter(term: string): string {
   return SEARCH_COLS.map((c) => `${c}.ilike."${quoted}"`).join(',')
 }
 
-function sortSubs(rows: Submission[], sort: SortKey): Submission[] {
+export function sortsByArchivedDate(status: SubmissionStatus, sort: SortKey): boolean {
+  return status === 'archived' && sort === 'received'
+}
+
+function sortSubs(rows: Submission[], sort: SortKey, status: SubmissionStatus): Submission[] {
   const r = [...rows]
   switch (sort) {
     case 'name':
@@ -110,18 +114,22 @@ function sortSubs(rows: Submission[], sort: SortKey): Submission[] {
       return r.sort((a, b) => (a.year ?? '').localeCompare(b.year ?? ''))
     case 'distance':
       return r.sort((a, b) => (b.distance_miles ?? 0) - (a.distance_miles ?? 0))
-    default:
+    default: {
+      const archivedFirst = sortsByArchivedDate(status, sort)
       return r.sort(
         (a, b) =>
           (b.bumped_at ?? '').localeCompare(a.bumped_at ?? '') ||
+          (archivedFirst ? (b.status_changed_at ?? '').localeCompare(a.status_changed_at ?? '') : 0) ||
           (b.received_date ?? '').localeCompare(a.received_date ?? ''),
       )
+    }
   }
 }
 
 function applySort<T extends { order: (col: string, o?: { ascending?: boolean; nullsFirst?: boolean }) => T }>(
   q: T,
   sort: SortKey,
+  status: SubmissionStatus,
 ): T {
   switch (sort) {
     case 'name':
@@ -130,10 +138,13 @@ function applySort<T extends { order: (col: string, o?: { ascending?: boolean; n
       return q.order('year', { ascending: true })
     case 'distance':
       return q.order('distance_miles', { ascending: false, nullsFirst: false })
-    default:
-      return q
-        .order('bumped_at', { ascending: false, nullsFirst: false })
-        .order('received_date', { ascending: false, nullsFirst: false })
+    default: {
+      let ordered = q.order('bumped_at', { ascending: false, nullsFirst: false })
+      if (sortsByArchivedDate(status, sort)) {
+        ordered = ordered.order('status_changed_at', { ascending: false, nullsFirst: false })
+      }
+      return ordered.order('received_date', { ascending: false, nullsFirst: false })
+    }
   }
 }
 
@@ -155,7 +166,7 @@ export async function getSubmissions(
     const supabase = await createClient()
     let q = supabase.from('submissions').select(SELECT_COLS, { count: 'exact' }).eq('status', status)
     if (search) q = q.or(orIlikeFilter(search))
-    q = applySort(q, sort).range(from, from + PAGE_SIZE - 1)
+    q = applySort(q, sort, status).range(from, from + PAGE_SIZE - 1)
     const { data, error, count } = await q
     if (error) throw error
     // A computed (non-literal) select string widens supabase-js's row type, so
@@ -174,7 +185,7 @@ export async function getSubmissions(
         .some((v) => v!.toLowerCase().includes(search)),
     )
   }
-  rows = sortSubs(rows, sort)
+  rows = sortSubs(rows, sort, status)
   return { rows: rows.slice(from, from + PAGE_SIZE), total: rows.length }
 }
 
@@ -290,7 +301,8 @@ export const devStore = {
       year: null, make: null, model: null, budget: null, project_start: null,
       project_description: null, restoration_decision_matrix: null,
       storage_type: null, storage_years: null,
-      status: 'new', received_date: null, original_date: null, bumped_at: null,
+      status: 'new', status_changed_at: new Date().toISOString(),
+      received_date: null, original_date: null, bumped_at: null,
       added_by: null, notes: null,
       call_attempt_one: null, call_attempt_two: null, call_attempt_three: null,
       email_attempt: null, images: [],

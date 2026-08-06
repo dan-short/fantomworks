@@ -25,6 +25,7 @@ import type { SortKey } from '@/lib/data'
 import { resolvePhotoUrl } from '@/lib/images'
 import { logCallAttempt, setStatus, addNote, bump } from '@/app/actions/submissions'
 import { signOut } from '@/app/login/actions'
+import { clearSavedLogin } from '@/lib/saved-login'
 import { LeadCard, type LeadActionKey } from './LeadCard'
 import { MobileLeadRow, MobileLeadSheet } from './MobileLeads'
 import { LeadEditDialog, type EditSection } from './LeadEditDialog'
@@ -36,7 +37,14 @@ const SORT_FIELDS: { k: SortKey; label: string; phrase: string }[] = [
   { k: 'vehicle', label: 'Vehicle year', phrase: 'Oldest → newest' },
   { k: 'distance', label: 'Distance', phrase: 'Farthest first' },
 ]
-const SORT_META = Object.fromEntries(SORT_FIELDS.map((f) => [f.k, f])) as Record<SortKey, (typeof SORT_FIELDS)[number]>
+type SortField = (typeof SORT_FIELDS)[number]
+
+function sortFieldsFor(view: SubmissionStatus): SortField[] {
+  if (view !== 'archived') return SORT_FIELDS
+  return SORT_FIELDS.map((f) =>
+    f.k === 'received' ? { ...f, label: 'Archived', phrase: 'Recently archived first' } : f,
+  )
+}
 
 function buildUrl(opts: { view: string; sort?: SortKey; q?: string; p?: number }): string {
   const params = new URLSearchParams()
@@ -159,10 +167,12 @@ function Pager({
 /* ── Filters popover — pick the sort field (direction is server-defined) ── */
 function FiltersPopover({
   sort,
+  fields,
   onPick,
   onClose,
 }: {
   sort: SortKey
+  fields: SortField[]
   onPick: (k: SortKey) => void
   onClose: () => void
 }) {
@@ -188,7 +198,7 @@ function FiltersPopover({
           Sort by
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          {SORT_FIELDS.map((f) => {
+          {fields.map((f) => {
             const on = sort === f.k
             return (
               <button
@@ -399,7 +409,8 @@ export function CallConsole({
 
   const tabs = STATUS_VIEWS.map((v) => ({ key: v.key, label: v.label, count: counts[v.key] ?? 0 }))
   const viewLabel = STATUS_VIEWS.find((v) => v.key === view)?.label ?? view
-  const sortMeta = SORT_META[sort] ?? SORT_META.received
+  const sortFields = sortFieldsFor(view)
+  const sortMeta = sortFields.find((f) => f.k === sort) ?? sortFields[0]
 
   function onAction(lead: Submission, k: LeadActionKey) {
     if (k === 'call1') return run(() => logCallAttempt(lead.id, 1))
@@ -596,7 +607,7 @@ export function CallConsole({
             >
               {night ? <Sun size={15} /> : <Moon size={15} />}
             </button>
-            <form action={signOut}>
+            <form action={signOut} onSubmit={() => clearSavedLogin()}>
               <button
                 style={{
                   border: 'none',
@@ -698,6 +709,7 @@ export function CallConsole({
               {filtersOpen && (
                 <FiltersPopover
                   sort={sort}
+                  fields={sortFields}
                   onPick={(k) => nav(buildUrl({ view, sort: k, q: search }))}
                   onClose={() => setFiltersOpen(false)}
                 />

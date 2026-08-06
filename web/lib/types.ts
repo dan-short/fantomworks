@@ -38,6 +38,7 @@ export interface Submission {
   storage_years: number | null
 
   status: SubmissionStatus
+  status_changed_at: string | null
   received_date: string | null
   original_date: string | null
   bumped_at: string | null

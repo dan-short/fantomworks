@@ -816,6 +816,12 @@ export function LeadCard({
             </div>
             <div className="tnum" style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--faint)', lineHeight: 1.35 }}>
               Received {fmtDate(lead.received_date)} · {relAge(lead.received_date)}
+              {lead.status === 'archived' && lead.status_changed_at && (
+                <>
+                  <br />
+                  Archived {fmtDate(lead.status_changed_at)}
+                </>
+              )}
             </div>
           </div>
         </div>

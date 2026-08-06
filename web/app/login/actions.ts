@@ -29,7 +29,7 @@ export async function signIn(_prev: LoginState, formData: FormData): Promise<Log
 export async function signOut() {
   if (isSupabaseConfigured) {
     const supabase = await createClient()
-    await supabase.auth.signOut()
+    await supabase.auth.signOut({ scope: 'local' })
   }
   revalidatePath('/', 'layout')
   redirect('/login')
