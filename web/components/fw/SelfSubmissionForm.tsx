@@ -13,6 +13,7 @@ import {
   ChevronRight,
   Trash,
   User,
+  Mail,
 } from 'lucide-react'
 import { FwButton, FwDialog, Spinner } from './primitives'
 import {
@@ -494,6 +495,30 @@ export function SelfSubmissionForm() {
             {[f.year, f.make, f.model].filter(Boolean).join(' ')} and someone from the shop will
             reach out at {f.phone}. We call in the order they come in — talk soon.
           </p>
+          {f.email ? (
+            <div
+              style={{
+                display: 'flex',
+                gap: 12,
+                textAlign: 'left',
+                background: 'color-mix(in oklch,var(--accent) 7%,white)',
+                border: '1px solid color-mix(in oklch,var(--accent) 25%,transparent)',
+                borderRadius: 'var(--radius-md)',
+                padding: '14px 16px',
+                marginBottom: 18,
+              }}
+            >
+              <span style={{ color: 'var(--accent)', flexShrink: 0, marginTop: 1 }}>
+                <Mail size={16} />
+              </span>
+              <div style={{ fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.6 }}>
+                <strong style={{ color: 'var(--ink)' }}>One more step — check your email.</strong>{' '}
+                We sent a confirmation link to {f.email}. Open it and press the button so we know
+                this address reaches you. If it isn&rsquo;t there in a few minutes, look in your
+                spam folder.
+              </div>
+            </div>
+          ) : null}
           <div
             style={{
               textAlign: 'left',
