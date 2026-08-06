@@ -30,7 +30,7 @@ The new Supabase DB holds a **copy**; the old site keeps running untouched.
 
 ## Phase 2 — Point form submissions at the new DB (the real cutover)  ◐ UI started, write path not begun
 The only delicate step — a live write path. **Full breakdown in [`docs/04-phase2-scope.md`](04-phase2-scope.md).**
-- ◐ Submission form UIs rebuilt in Next.js — self-service `web/app/submit` and office quick-entry `web/app/calls/new` — but **UI-only stubs** (validate + preview, no persist). The write endpoint (`POST /api/submit` / server action) is not built.
+- ◐ Submission form UIs rebuilt in Next.js — self-service `web/app/submit` and office quick-entry `web/app/new` — but **UI-only stubs** (validate + preview, no persist). The write endpoint (`POST /api/submit` / server action) is not built.
 - ☐ Port `calllogprocessor2.php` logic: phone format, distance calc (via `zipcodes`), atomic insert of submission + 4 detail stages
 - ◐ Images → Supabase Storage: bucket now **private** with staff-only reads (`migrations/0006`); viewer mints signed URLs server-side (`web/lib/data.ts`); new photos stored as bucket keys; backfill old `/uploads` still pending
 - ☐ Confirmation email (decision: Resend vs SMTP)

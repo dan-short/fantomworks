@@ -6,7 +6,7 @@ ships with a fallback.
 
 Status: partially started (UI-first). The submission form UIs are built as Next.js pages —
 public self-service `web/app/submit` (`SelfSubmissionForm`) and office quick-entry
-`web/app/calls/new` (`OfficeSubmissionForm`) — with validation and client-side photo upload,
+`web/app/new` (`OfficeSubmissionForm`) — with validation and client-side photo upload,
 but they do **not** persist yet: submit is a UI stub (thank-you / saved screen, nothing
 written). The write endpoint, confirmation email, and cutover are not started. Prereq:
 Phase 1 (done — viewer live at fantomworks.vercel.app).
@@ -81,7 +81,7 @@ Detail stages (form provides only these four — mirror `calllogprocessor2.php`)
 
 ### A. Submission endpoint
 - ☑ Form hosting decided — rebuilt as Next.js pages (option b): public self-service form
-  (`web/app/submit`, `SelfSubmissionForm`) and office quick-entry (`web/app/calls/new`,
+  (`web/app/submit`, `SelfSubmissionForm`) and office quick-entry (`web/app/new`,
   `OfficeSubmissionForm`). Both are **UI-only stubs today** — they validate and preview but
   discard on submit.
 - ☐ Route Handler `POST /api/submit` (or Server Action) — accepts multipart, validates. **Not

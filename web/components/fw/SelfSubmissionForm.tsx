@@ -1622,22 +1622,14 @@ function SubmitHeader({
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <span
-          style={{
-            width: 30,
-            height: 30,
-            borderRadius: 'var(--radius-sm)',
-            background: 'var(--accent)',
-            display: 'grid',
-            placeItems: 'center',
-            color: '#fff',
-            fontFamily: 'var(--font-display)',
-            fontWeight: 700,
-            fontSize: 16,
-          }}
-        >
-          FW
-        </span>
+        <Image
+          src="/logo.png"
+          alt="FantomWorks"
+          width={30}
+          height={30}
+          priority
+          style={{ width: 30, height: 30, borderRadius: '50%' }}
+        />
         {stacked ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
             {wordmark}

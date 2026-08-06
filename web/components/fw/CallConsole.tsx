@@ -469,23 +469,19 @@ export function CallConsole({
       <header style={{ position: 'sticky', top: 0, zIndex: 20, background: 'var(--steel)', boxShadow: 'var(--shadow-md)' }}>
         <div style={{ padding: '12px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span
+            <Image
+              src="/logo.png"
+              alt="FantomWorks"
+              width={30}
+              height={30}
+              priority
               style={{
                 width: 30,
                 height: 30,
-                borderRadius: 'var(--radius-sm)',
-                background: 'var(--accent)',
-                display: 'grid',
-                placeItems: 'center',
-                color: '#fff',
-                fontFamily: 'var(--font-display)',
-                fontWeight: 700,
-                fontSize: 16,
+                borderRadius: '50%',
                 boxShadow: 'var(--shadow-sm)',
               }}
-            >
-              FW
-            </span>
+            />
             <span
               style={{
                 fontFamily: 'var(--font-display)',
@@ -520,7 +516,7 @@ export function CallConsole({
               </span>
             )}
             <button
-              onClick={() => router.push('/calls/new')}
+              onClick={() => router.push('/new')}
               title="Log a phoned-in or walk-in lead"
               style={{
                 display: 'inline-flex',
