@@ -22,6 +22,15 @@ import {
 import type { Submission, DetailsMap, SubmissionStatus } from '@/lib/types'
 import { STATUS_VIEWS } from '@/lib/types'
 import type { SortKey } from '@/lib/data'
+import {
+  SEARCH_CATEGORIES,
+  TEXT_FIELDS,
+  searchTokens,
+  serializeCategories,
+  serializeFields,
+  type SearchFields,
+  type TextField,
+} from '@/lib/search'
 import { resolvePhotoUrl } from '@/lib/images'
 import { logCallAttempt, setStatus, addNote, bump } from '@/app/actions/submissions'
 import { signOut } from '@/app/login/actions'
@@ -39,18 +48,47 @@ const SORT_FIELDS: { k: SortKey; label: string; phrase: string }[] = [
 ]
 type SortField = (typeof SORT_FIELDS)[number]
 
-function sortFieldsFor(view: SubmissionStatus): SortField[] {
-  if (view !== 'archived') return SORT_FIELDS
-  return SORT_FIELDS.map((f) =>
-    f.k === 'received' ? { ...f, label: 'Archived', phrase: 'Recently archived first' } : f,
-  )
+const RELEVANCE_FIELD: SortField = {
+  k: 'relevance',
+  label: 'Relevance',
+  phrase: 'Closest match first',
 }
 
-function buildUrl(opts: { view: string; sort?: SortKey; q?: string; p?: number }): string {
+function sortFieldsFor(view: SubmissionStatus, searching: boolean): SortField[] {
+  const base =
+    view === 'archived' && !searching
+      ? SORT_FIELDS.map((f) =>
+          f.k === 'received' ? { ...f, label: 'Archived', phrase: 'Recently archived first' } : f,
+        )
+      : SORT_FIELDS
+  return searching ? [RELEVANCE_FIELD, ...base] : base
+}
+
+const CATEGORY_LABEL: Record<string, string> = Object.fromEntries(
+  STATUS_VIEWS.map((v) => [v.key, v.label]),
+)
+
+function buildUrl(opts: {
+  view: string
+  sort?: SortKey
+  q?: string
+  p?: number
+  cats?: SubmissionStatus[]
+  fields?: SearchFields
+}): string {
   const params = new URLSearchParams()
   params.set('view', opts.view)
-  if (opts.sort && opts.sort !== 'received') params.set('sort', opts.sort)
-  if (opts.q) params.set('q', opts.q)
+  const q = opts.q?.trim()
+  if (opts.sort && opts.sort !== (q ? 'relevance' : 'received')) params.set('sort', opts.sort)
+  if (q) params.set('q', q)
+  if (q && opts.cats) {
+    const cats = serializeCategories(opts.cats)
+    if (cats) params.set('cats', cats)
+  }
+  if (q && opts.fields) {
+    const fields = serializeFields(opts.fields)
+    if (fields) params.set('fields', fields)
+  }
   if (opts.p && opts.p > 1) params.set('p', String(opts.p))
   return `/calls?${params.toString()}`
 }
@@ -167,13 +205,25 @@ function Pager({
 /* ── Filters popover — pick the sort field (direction is server-defined) ── */
 function FiltersPopover({
   sort,
+  sortFields,
+  searching,
+  cats,
   fields,
+  counts,
   onPick,
+  onToggleCat,
+  onToggleField,
   onClose,
 }: {
   sort: SortKey
-  fields: SortField[]
+  sortFields: SortField[]
+  searching: boolean
+  cats: SubmissionStatus[]
+  fields: SearchFields
+  counts: Record<string, number>
   onPick: (k: SortKey) => void
+  onToggleCat: (k: SubmissionStatus) => void
+  onToggleField: (k: TextField) => void
   onClose: () => void
 }) {
   return (
@@ -186,6 +236,8 @@ function FiltersPopover({
           top: 'calc(100% + 6px)',
           zIndex: 41,
           width: 244,
+          maxHeight: 'min(70vh, 520px)',
+          overflowY: 'auto',
           background: 'var(--surface-card)',
           border: '1px solid var(--border-hairline)',
           borderTop: '3px solid var(--accent)',
@@ -198,7 +250,7 @@ function FiltersPopover({
           Sort by
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          {fields.map((f) => {
+          {sortFields.map((f) => {
             const on = sort === f.k
             return (
               <button
@@ -249,8 +301,167 @@ function FiltersPopover({
             )
           })}
         </div>
+
+        {searching && (
+          <>
+            <div
+              style={{
+                marginTop: 14,
+                paddingTop: 11,
+                borderTop: '1px solid var(--border-hairline)',
+              }}
+            >
+              <span className="fw-label">Also search</span>
+              <div style={{ fontSize: 10.5, color: 'var(--faint)', marginTop: 2 }}>
+                Slower — these are long free-text fields
+              </div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 7 }}>
+              {TEXT_FIELDS.map((f) => {
+                const on = fields[f.k]
+                return (
+                  <button
+                    key={f.k}
+                    onClick={() => onToggleField(f.k)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      width: '100%',
+                      cursor: 'pointer',
+                      padding: '6px 9px',
+                      borderRadius: 'var(--radius-sm)',
+                      textAlign: 'left',
+                      border: '1px solid transparent',
+                      background: 'transparent',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'var(--paper-sunk)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent'
+                    }}
+                  >
+                    <span
+                      aria-hidden
+                      style={{
+                        width: 15,
+                        height: 15,
+                        flexShrink: 0,
+                        borderRadius: 'var(--radius-xs)',
+                        border: `1.5px solid ${on ? 'var(--accent)' : 'var(--border-strong)'}`,
+                        background: on ? 'var(--accent)' : 'var(--surface-card)',
+                        color: '#fff',
+                        display: 'grid',
+                        placeItems: 'center',
+                      }}
+                    >
+                      {on && <Check size={10} strokeWidth={3.5} />}
+                    </span>
+                    <span style={{ flex: 1, minWidth: 0 }}>
+                      <span style={{ display: 'block', fontSize: 12.5, color: on ? 'var(--ink-2)' : 'var(--faint)' }}>
+                        {f.label}
+                      </span>
+                      <span style={{ display: 'block', fontSize: 10.5, color: 'var(--faint)' }}>{f.hint}</span>
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'baseline',
+                justifyContent: 'space-between',
+                gap: 8,
+                marginTop: 14,
+                paddingTop: 11,
+                borderTop: '1px solid var(--border-hairline)',
+              }}
+            >
+              <span className="fw-label">Show categories</span>
+              <span className="tnum" style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--faint)' }}>
+                {cats.length}/{SEARCH_CATEGORIES.length}
+              </span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 7 }}>
+              {SEARCH_CATEGORIES.map((c) => {
+                const on = cats.includes(c)
+                const n = counts[c] ?? 0
+                const only = on && cats.length === 1
+                return (
+                  <button
+                    key={c}
+                    disabled={only}
+                    title={only ? 'At least one category has to stay on' : undefined}
+                    onClick={() => onToggleCat(c)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      width: '100%',
+                      cursor: only ? 'default' : 'pointer',
+                      padding: '6px 9px',
+                      borderRadius: 'var(--radius-sm)',
+                      textAlign: 'left',
+                      border: '1px solid transparent',
+                      background: 'transparent',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!only) e.currentTarget.style.background = 'var(--paper-sunk)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent'
+                    }}
+                  >
+                    <span
+                      aria-hidden
+                      style={{
+                        width: 15,
+                        height: 15,
+                        flexShrink: 0,
+                        borderRadius: 'var(--radius-xs)',
+                        border: `1.5px solid ${on ? 'var(--accent)' : 'var(--border-strong)'}`,
+                        background: on ? 'var(--accent)' : 'var(--surface-card)',
+                        color: '#fff',
+                        display: 'grid',
+                        placeItems: 'center',
+                      }}
+                    >
+                      {on && <Check size={10} strokeWidth={3.5} />}
+                    </span>
+                    <span style={{ flex: 1, fontSize: 12.5, color: on ? 'var(--ink-2)' : 'var(--faint)' }}>
+                      {CATEGORY_LABEL[c] ?? c}
+                    </span>
+                    <span
+                      className="tnum"
+                      style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: n ? 'var(--muted)' : 'var(--faint)' }}
+                    >
+                      {n}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </>
+        )}
       </div>
     </>
+  )
+}
+
+function CategoryHeader({ status, shown, total }: { status: SubmissionStatus; shown: number; total: number }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: 4 }}>
+      <span className="fw-label" style={{ color: 'var(--ink-2)', letterSpacing: '.14em' }}>
+        {CATEGORY_LABEL[status] ?? status}
+      </span>
+      <span className="tnum" style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--faint)', whiteSpace: 'nowrap' }}>
+        {shown === total ? `${total}` : `${shown} of ${total}`}
+      </span>
+      <span aria-hidden style={{ flex: 1, height: 1, background: 'var(--border-hairline)' }} />
+    </div>
   )
 }
 
@@ -281,7 +492,7 @@ function SearchField({ value, onChange, onClear }: { value: string; onChange: (v
         onChange={(e) => onChange(e.target.value)}
         onFocus={() => setFocus(true)}
         onBlur={() => setFocus(false)}
-        placeholder="Search name, vehicle, city, email…  ( / )"
+        placeholder="Search every category — vehicle, city, email…  ( / )"
         style={{
           flex: 1,
           border: 'none',
@@ -316,6 +527,9 @@ export function CallConsole({
   view,
   sort,
   search,
+  searching,
+  cats,
+  fields,
   page,
   pageCount,
   total,
@@ -330,6 +544,9 @@ export function CallConsole({
   view: SubmissionStatus
   sort: SortKey
   search: string
+  searching: boolean
+  cats: SubmissionStatus[]
+  fields: SearchFields
   page: number
   pageCount: number
   total: number
@@ -375,7 +592,10 @@ export function CallConsole({
     const h = setTimeout(() => {
       const draft = qInput.trim()
       if (draft === (search ?? '')) return
-      router.replace(buildUrl({ view, sort, q: draft }))
+      const willSearch = searchTokens(draft).length > 0
+      router.replace(
+        buildUrl({ view, sort: willSearch === searching ? sort : undefined, q: draft, cats, fields }),
+      )
     }, 350)
     return () => clearTimeout(h)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -409,8 +629,32 @@ export function CallConsole({
 
   const tabs = STATUS_VIEWS.map((v) => ({ key: v.key, label: v.label, count: counts[v.key] ?? 0 }))
   const viewLabel = STATUS_VIEWS.find((v) => v.key === view)?.label ?? view
-  const sortFields = sortFieldsFor(view)
+  const sortFields = sortFieldsFor(view, searching)
   const sortMeta = sortFields.find((f) => f.k === sort) ?? sortFields[0]
+  const tokens = React.useMemo(() => (searching ? searchTokens(search) : []), [searching, search])
+  const hiddenCount = searching
+    ? SEARCH_CATEGORIES.filter((c) => !cats.includes(c)).reduce((n, c) => n + (counts[c] ?? 0), 0)
+    : 0
+
+  const groups = React.useMemo(() => {
+    const out: { status: SubmissionStatus; rows: Submission[] }[] = []
+    for (const r of rows) {
+      const tail = out[out.length - 1]
+      if (tail && tail.status === r.status) tail.rows.push(r)
+      else out.push({ status: r.status, rows: [r] })
+    }
+    return out
+  }, [rows])
+
+  function toggleCat(k: SubmissionStatus) {
+    const next = cats.includes(k) ? cats.filter((c) => c !== k) : [...cats, k]
+    if (!next.length) return
+    nav(buildUrl({ view, sort, q: search, cats: next, fields }))
+  }
+
+  function toggleField(k: TextField) {
+    nav(buildUrl({ view, sort, q: search, cats, fields: { ...fields, [k]: !fields[k] } }))
+  }
 
   function onAction(lead: Submission, k: LeadActionKey) {
     if (k === 'call1') return run(() => logCallAttempt(lead.id, 1))
@@ -639,7 +883,11 @@ export function CallConsole({
               } as React.CSSProperties
             }
           >
-            <PipelineNav active={view} onChange={(k) => nav(buildUrl({ view: k }))} tabs={tabs} />
+            <PipelineNav
+              active={view}
+              onChange={(k) => nav(buildUrl({ view: k, sort, q: search, cats, fields }))}
+              tabs={tabs}
+            />
           </div>
           <div className="fw-controls" style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
             <button
@@ -709,8 +957,14 @@ export function CallConsole({
               {filtersOpen && (
                 <FiltersPopover
                   sort={sort}
-                  fields={sortFields}
-                  onPick={(k) => nav(buildUrl({ view, sort: k, q: search }))}
+                  sortFields={sortFields}
+                  searching={searching}
+                  cats={cats}
+                  fields={fields}
+                  counts={counts}
+                  onPick={(k) => nav(buildUrl({ view, sort: k, q: search, cats, fields }))}
+                  onToggleCat={toggleCat}
+                  onToggleField={toggleField}
                   onClose={() => setFiltersOpen(false)}
                 />
               )}
@@ -720,14 +974,40 @@ export function CallConsole({
 
         <div className="fw-summary" style={{ background: 'var(--bg-app)', borderTop: '1px solid var(--border-hairline)', boxShadow: 'var(--shadow-xs)', padding: '11px 22px 9px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
               <span style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 600, letterSpacing: '.04em', textTransform: 'uppercase', color: 'var(--ink)' }}>
-                {viewLabel}
+                {searching ? 'Search' : viewLabel}
               </span>
               <span className="tnum" style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--muted)' }}>
-                {total} {total === 1 ? 'lead' : 'leads'}
+                {searching ? (
+                  <>
+                    {total} {total === 1 ? 'match' : 'matches'} across all categories
+                  </>
+                ) : (
+                  <>
+                    {total} {total === 1 ? 'lead' : 'leads'}
+                  </>
+                )}
                 {pageCount > 1 && <span style={{ color: 'var(--faint)' }}> · showing {first}–{last}</span>}
               </span>
+              {hiddenCount > 0 && (
+                <button
+                  onClick={() => nav(buildUrl({ view, sort, q: search, cats: SEARCH_CATEGORIES, fields }))}
+                  className="tnum"
+                  style={{
+                    border: '1px solid var(--border-strong)',
+                    background: 'var(--surface-card)',
+                    borderRadius: 'var(--radius-sm)',
+                    cursor: 'pointer',
+                    padding: '2px 8px',
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 11,
+                    color: 'var(--muted)',
+                  }}
+                >
+                  {hiddenCount} hidden by filters — show all
+                </button>
+              )}
             </div>
             <div className="fw-hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--faint)' }}>
               <span className="fw-label" style={{ marginRight: 2 }}>
@@ -757,30 +1037,45 @@ export function CallConsole({
         {rows.length > 0 ? (
           <>
             <div className="fw-desktop-only" style={{ display: 'flex', flexDirection: 'column', gap: density === 'compact' ? 7 : 12 }}>
-              {rows.map((l) => (
-                <LeadCard
-                  key={l.id}
-                  lead={l}
-                  stages={details[l.id] ?? []}
-                  compact={density === 'compact'}
-                  selected={sel.has(l.id)}
-                  editMode={editMode}
-                  onEditSection={(lead, section) => setEditing({ lead, section })}
-                  onToggleSelect={toggleSel}
-                  onAction={onAction}
-                  onAddNote={(lead) => {
-                    setNoteFor(lead)
-                    setNoteText('')
-                  }}
-                  onOpenPhotos={(lead, idx) => setPhotos({ lead, idx })}
-                  onConfirm={onConfirm}
-                />
+              {groups.map((g) => (
+                <React.Fragment key={g.status}>
+                  {searching && (
+                    <CategoryHeader status={g.status} shown={g.rows.length} total={counts[g.status] ?? 0} />
+                  )}
+                  {g.rows.map((l) => (
+                    <LeadCard
+                      key={l.id}
+                      lead={l}
+                      stages={details[l.id] ?? []}
+                      compact={density === 'compact'}
+                      selected={sel.has(l.id)}
+                      editMode={editMode}
+                      tokens={tokens}
+                      onEditSection={(lead, section) => setEditing({ lead, section })}
+                      onToggleSelect={toggleSel}
+                      onAction={onAction}
+                      onAddNote={(lead) => {
+                        setNoteFor(lead)
+                        setNoteText('')
+                      }}
+                      onOpenPhotos={(lead, idx) => setPhotos({ lead, idx })}
+                      onConfirm={onConfirm}
+                    />
+                  ))}
+                </React.Fragment>
               ))}
             </div>
             <div className="fw-mobile-only">
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {rows.map((l) => (
-                  <MobileLeadRow key={l.id} lead={l} onOpen={(lead) => setSheetId(lead.id)} />
+                {groups.map((g) => (
+                  <React.Fragment key={g.status}>
+                    {searching && (
+                      <CategoryHeader status={g.status} shown={g.rows.length} total={counts[g.status] ?? 0} />
+                    )}
+                    {g.rows.map((l) => (
+                      <MobileLeadRow key={l.id} lead={l} onOpen={(lead) => setSheetId(lead.id)} />
+                    ))}
+                  </React.Fragment>
                 ))}
               </div>
             </div>
@@ -800,10 +1095,18 @@ export function CallConsole({
           >
             <Wrench size={26} />
             <p style={{ margin: '12px 0 2px', fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--muted)' }}>
-              {search ? 'No matching leads' : `Nothing in ${viewLabel} yet`}
+              {searching ? 'No matching leads' : search ? 'Keep typing' : `Nothing in ${viewLabel} yet`}
             </p>
             <p style={{ margin: 0, fontSize: 12.5 }}>
-              {search ? 'No leads match your search — clear it to see the full list.' : 'Triage a lead from the Call Log — move it here with the ⋮ actions menu.'}
+              {searching
+                ? hiddenCount > 0
+                  ? `Every match is in a category you have switched off — ${hiddenCount} hidden.`
+                  : !fields.desc && !fields.tasks
+                    ? 'Nothing matched on vehicle, name, city or email. Project descriptions and estimate tasks are not searched by default — turn them on under Filters.'
+                    : 'Nothing matched in any category, even loosely. Try fewer or shorter words.'
+                : search
+                  ? 'Search needs at least two letters.'
+                  : 'Triage a lead from the Call Log — move it here with the ⋮ actions menu.'}
             </p>
           </div>
         )}
@@ -812,8 +1115,8 @@ export function CallConsole({
           <Pager
             page={page}
             pageCount={pageCount}
-            onGo={(p) => nav(buildUrl({ view, sort, q: search, p }))}
-            hrefFor={(p) => buildUrl({ view, sort, q: search, p })}
+            onGo={(p) => nav(buildUrl({ view, sort, q: search, cats, fields, p }))}
+            hrefFor={(p) => buildUrl({ view, sort, q: search, cats, fields, p })}
           />
         )}
       </main>

@@ -1,29 +1,65 @@
-import { getSubmissions, getDetailStagesFor, countByStatus, PAGE_SIZE, type SortKey } from '@/lib/data'
+import {
+  getSubmissions,
+  getDetailStagesFor,
+  countByStatus,
+  searchSubmissions,
+  PAGE_SIZE,
+  SEARCH_PAGE_SIZE,
+  type SortKey,
+} from '@/lib/data'
+import { parseCategories, parseFields, searchTokens } from '@/lib/search'
 import { isStatus, type SubmissionStatus } from '@/lib/types'
 import { isSupabaseConfigured } from '@/lib/supabase/config'
 import { createClient } from '@/lib/supabase/server'
 import { CallConsole } from '@/components/fw/CallConsole'
 
+const SORT_KEYS: SortKey[] = ['relevance', 'received', 'name', 'vehicle', 'distance']
+
 export default async function CallsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string; sort?: string; q?: string; p?: string }>
+  searchParams: Promise<{
+    view?: string
+    sort?: string
+    q?: string
+    p?: string
+    cats?: string
+    fields?: string
+  }>
 }) {
   const sp = await searchParams
   const view: SubmissionStatus = sp.view && isStatus(sp.view) ? sp.view : 'new'
-  const sort = (sp.sort as SortKey) ?? 'received'
-  const search = sp.q ?? ''
+  const search = (sp.q ?? '').trim()
+  const searching = searchTokens(search).length > 0
+  const cats = parseCategories(sp.cats)
+  const fields = parseFields(sp.fields)
   const page = Math.max(1, Number(sp.p) || 1)
 
-  const [{ rows, total }, counts] = await Promise.all([
-    getSubmissions(view, { sort, search, page }),
-    countByStatus(),
-  ])
+  const requested = SORT_KEYS.includes(sp.sort as SortKey) ? (sp.sort as SortKey) : undefined
+  const sort: SortKey = requested ?? (searching ? 'relevance' : 'received')
+
+  let rows, total, counts
+  if (searching) {
+    const result = await searchSubmissions({ q: search, view, cats, fields, sort, page })
+    rows = result.rows
+    total = result.total
+    counts = result.counts
+  } else {
+    const [pageResult, statusCounts] = await Promise.all([
+      getSubmissions(view, { sort: sort === 'relevance' ? 'received' : sort, page }),
+      countByStatus(),
+    ])
+    rows = pageResult.rows
+    total = pageResult.total
+    counts = statusCounts
+  }
+
   const details = await getDetailStagesFor(rows.map((s) => s.id))
 
-  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE))
-  const first = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1
-  const last = (page - 1) * PAGE_SIZE + rows.length
+  const size = searching ? SEARCH_PAGE_SIZE : PAGE_SIZE
+  const pageCount = Math.max(1, Math.ceil(total / size))
+  const first = total === 0 ? 0 : (page - 1) * size + 1
+  const last = (page - 1) * size + rows.length
 
   let email: string | null = null
   if (isSupabaseConfigured) {
@@ -42,6 +78,9 @@ export default async function CallsPage({
       view={view}
       sort={sort}
       search={search}
+      searching={searching}
+      cats={cats}
+      fields={fields}
       page={page}
       pageCount={pageCount}
       total={total}
