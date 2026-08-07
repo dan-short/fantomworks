@@ -7,7 +7,7 @@ import {
   SEARCH_PAGE_SIZE,
   type SortKey,
 } from '@/lib/data'
-import { parseCategories, searchTokens } from '@/lib/search'
+import { parseCategories, parseFields, searchTokens } from '@/lib/search'
 import { isStatus, type SubmissionStatus } from '@/lib/types'
 import { isSupabaseConfigured } from '@/lib/supabase/config'
 import { createClient } from '@/lib/supabase/server'
@@ -18,13 +18,21 @@ const SORT_KEYS: SortKey[] = ['relevance', 'received', 'name', 'vehicle', 'dista
 export default async function CallsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string; sort?: string; q?: string; p?: string; cats?: string }>
+  searchParams: Promise<{
+    view?: string
+    sort?: string
+    q?: string
+    p?: string
+    cats?: string
+    fields?: string
+  }>
 }) {
   const sp = await searchParams
   const view: SubmissionStatus = sp.view && isStatus(sp.view) ? sp.view : 'new'
   const search = (sp.q ?? '').trim()
   const searching = searchTokens(search).length > 0
   const cats = parseCategories(sp.cats)
+  const fields = parseFields(sp.fields)
   const page = Math.max(1, Number(sp.p) || 1)
 
   const requested = SORT_KEYS.includes(sp.sort as SortKey) ? (sp.sort as SortKey) : undefined
@@ -32,7 +40,7 @@ export default async function CallsPage({
 
   let rows, total, counts
   if (searching) {
-    const result = await searchSubmissions({ q: search, view, cats, sort, page })
+    const result = await searchSubmissions({ q: search, view, cats, fields, sort, page })
     rows = result.rows
     total = result.total
     counts = result.counts
@@ -72,6 +80,7 @@ export default async function CallsPage({
       search={search}
       searching={searching}
       cats={cats}
+      fields={fields}
       page={page}
       pageCount={pageCount}
       total={total}

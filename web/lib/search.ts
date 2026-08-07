@@ -30,6 +30,27 @@ export function searchTokens(q: string): string[] {
     .filter((t) => t.length >= 2)
 }
 
+export type TextField = 'desc' | 'tasks'
+
+export const TEXT_FIELDS: { k: TextField; label: string; hint: string }[] = [
+  { k: 'desc', label: 'Project description', hint: "What the customer wrote" },
+  { k: 'tasks', label: 'Estimate tasks', hint: 'Stage labels and line items' },
+]
+
+export type SearchFields = Record<TextField, boolean>
+
+export const NO_TEXT_FIELDS: SearchFields = { desc: false, tasks: false }
+
+export function parseFields(raw: string | undefined): SearchFields {
+  const on = new Set((raw ?? '').split(',').map((s) => s.trim()))
+  return { desc: on.has('desc'), tasks: on.has('tasks') }
+}
+
+export function serializeFields(fields: SearchFields): string | undefined {
+  const on = TEXT_FIELDS.filter((f) => fields[f.k]).map((f) => f.k)
+  return on.length ? on.join(',') : undefined
+}
+
 export function parseCategories(raw: string | undefined): SubmissionStatus[] {
   if (!raw) return SEARCH_CATEGORIES
   const wanted = new Set(raw.split(',').map((s) => s.trim()))
@@ -74,7 +95,7 @@ export function wordSimilarity(needle: string, haystack: string): number {
   return Math.min(1, best)
 }
 
-function blobs(lead: Submission, stages: DetailStage[]) {
+function blobs(lead: Submission, stages: DetailStage[], fields: SearchFields) {
   const join = (...parts: (string | null | undefined)[]) =>
     parts.filter(Boolean).join(' ').toLowerCase()
   return {
@@ -82,8 +103,8 @@ function blobs(lead: Submission, stages: DetailStage[]) {
     name: join(lead.first_name, lead.last_name),
     city: join(lead.city, lead.state_country),
     email: join(lead.email),
-    desc: join(lead.project_description),
-    tasks: stages.map((s) => join(s.label, s.description)).join(' '),
+    desc: fields.desc ? join(lead.project_description) : '',
+    tasks: fields.tasks ? stages.map((s) => join(s.label, s.description)).join(' ') : '',
   }
 }
 
@@ -93,8 +114,9 @@ function measure(
   lead: Submission,
   stages: DetailStage[],
   tokens: string[],
+  search: SearchFields,
 ): { fields: FieldScores; recruits: boolean[] } {
-  const b = blobs(lead, stages)
+  const b = blobs(lead, stages, search)
   const fields: FieldScores = { vehicle: 0, name: 0, city: 0, email: 0, desc: 0, tasks: 0 }
   const recruits: boolean[] = []
 
@@ -127,26 +149,32 @@ function combine(fields: FieldScores): number {
   return best < SCORE_FLOOR ? 0 : Math.min(1, best + 0.02 * hits)
 }
 
-export function scoreSubmission(lead: Submission, stages: DetailStage[], tokens: string[]): number {
+export function scoreSubmission(
+  lead: Submission,
+  stages: DetailStage[],
+  tokens: string[],
+  search: SearchFields = NO_TEXT_FIELDS,
+): number {
   if (!tokens.length) return 0
-  const { fields, recruits } = measure(lead, stages, tokens)
+  const { fields, recruits } = measure(lead, stages, tokens, search)
   return recruits.some(Boolean) ? combine(fields) : 0
 }
 
 export function searchCollection<T>(
   items: T[],
   tokens: string[],
+  search: SearchFields,
   read: (item: T) => { lead: Submission; stages: DetailStage[] },
 ): { lead: Submission; score: number }[] {
   if (!tokens.length) return []
 
   const measured = items.map((item) => {
     const { lead, stages } = read(item)
-    return { lead, ...measure(lead, stages, tokens) }
+    return { lead, ...measure(lead, stages, tokens, search) }
   })
 
   const recruited = tokens.map((_, i) => measured.reduce((n, m) => n + (m.recruits[i] ? 1 : 0), 0))
-  const cap = Math.max(250, Math.floor(measured.length / 4))
+  const cap = Math.max(200, Math.floor(measured.length / 8))
   let keep = tokens.map((_, i) => recruited[i] <= cap)
   if (!keep.some(Boolean)) keep = tokens.map(() => true)
 

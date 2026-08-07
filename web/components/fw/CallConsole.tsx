@@ -22,7 +22,15 @@ import {
 import type { Submission, DetailsMap, SubmissionStatus } from '@/lib/types'
 import { STATUS_VIEWS } from '@/lib/types'
 import type { SortKey } from '@/lib/data'
-import { SEARCH_CATEGORIES, searchTokens, serializeCategories } from '@/lib/search'
+import {
+  SEARCH_CATEGORIES,
+  TEXT_FIELDS,
+  searchTokens,
+  serializeCategories,
+  serializeFields,
+  type SearchFields,
+  type TextField,
+} from '@/lib/search'
 import { resolvePhotoUrl } from '@/lib/images'
 import { logCallAttempt, setStatus, addNote, bump } from '@/app/actions/submissions'
 import { signOut } from '@/app/login/actions'
@@ -66,6 +74,7 @@ function buildUrl(opts: {
   q?: string
   p?: number
   cats?: SubmissionStatus[]
+  fields?: SearchFields
 }): string {
   const params = new URLSearchParams()
   params.set('view', opts.view)
@@ -75,6 +84,10 @@ function buildUrl(opts: {
   if (q && opts.cats) {
     const cats = serializeCategories(opts.cats)
     if (cats) params.set('cats', cats)
+  }
+  if (q && opts.fields) {
+    const fields = serializeFields(opts.fields)
+    if (fields) params.set('fields', fields)
   }
   if (opts.p && opts.p > 1) params.set('p', String(opts.p))
   return `/calls?${params.toString()}`
@@ -192,21 +205,25 @@ function Pager({
 /* ── Filters popover — pick the sort field (direction is server-defined) ── */
 function FiltersPopover({
   sort,
-  fields,
+  sortFields,
   searching,
   cats,
+  fields,
   counts,
   onPick,
   onToggleCat,
+  onToggleField,
   onClose,
 }: {
   sort: SortKey
-  fields: SortField[]
+  sortFields: SortField[]
   searching: boolean
   cats: SubmissionStatus[]
+  fields: SearchFields
   counts: Record<string, number>
   onPick: (k: SortKey) => void
   onToggleCat: (k: SubmissionStatus) => void
+  onToggleField: (k: TextField) => void
   onClose: () => void
 }) {
   return (
@@ -233,7 +250,7 @@ function FiltersPopover({
           Sort by
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          {fields.map((f) => {
+          {sortFields.map((f) => {
             const on = sort === f.k
             return (
               <button
@@ -287,6 +304,71 @@ function FiltersPopover({
 
         {searching && (
           <>
+            <div
+              style={{
+                marginTop: 14,
+                paddingTop: 11,
+                borderTop: '1px solid var(--border-hairline)',
+              }}
+            >
+              <span className="fw-label">Also search</span>
+              <div style={{ fontSize: 10.5, color: 'var(--faint)', marginTop: 2 }}>
+                Slower — these are long free-text fields
+              </div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 7 }}>
+              {TEXT_FIELDS.map((f) => {
+                const on = fields[f.k]
+                return (
+                  <button
+                    key={f.k}
+                    onClick={() => onToggleField(f.k)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      width: '100%',
+                      cursor: 'pointer',
+                      padding: '6px 9px',
+                      borderRadius: 'var(--radius-sm)',
+                      textAlign: 'left',
+                      border: '1px solid transparent',
+                      background: 'transparent',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'var(--paper-sunk)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent'
+                    }}
+                  >
+                    <span
+                      aria-hidden
+                      style={{
+                        width: 15,
+                        height: 15,
+                        flexShrink: 0,
+                        borderRadius: 'var(--radius-xs)',
+                        border: `1.5px solid ${on ? 'var(--accent)' : 'var(--border-strong)'}`,
+                        background: on ? 'var(--accent)' : 'var(--surface-card)',
+                        color: '#fff',
+                        display: 'grid',
+                        placeItems: 'center',
+                      }}
+                    >
+                      {on && <Check size={10} strokeWidth={3.5} />}
+                    </span>
+                    <span style={{ flex: 1, minWidth: 0 }}>
+                      <span style={{ display: 'block', fontSize: 12.5, color: on ? 'var(--ink-2)' : 'var(--faint)' }}>
+                        {f.label}
+                      </span>
+                      <span style={{ display: 'block', fontSize: 10.5, color: 'var(--faint)' }}>{f.hint}</span>
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+
             <div
               style={{
                 display: 'flex',
@@ -447,6 +529,7 @@ export function CallConsole({
   search,
   searching,
   cats,
+  fields,
   page,
   pageCount,
   total,
@@ -463,6 +546,7 @@ export function CallConsole({
   search: string
   searching: boolean
   cats: SubmissionStatus[]
+  fields: SearchFields
   page: number
   pageCount: number
   total: number
@@ -510,7 +594,7 @@ export function CallConsole({
       if (draft === (search ?? '')) return
       const willSearch = searchTokens(draft).length > 0
       router.replace(
-        buildUrl({ view, sort: willSearch === searching ? sort : undefined, q: draft, cats }),
+        buildUrl({ view, sort: willSearch === searching ? sort : undefined, q: draft, cats, fields }),
       )
     }, 350)
     return () => clearTimeout(h)
@@ -565,7 +649,11 @@ export function CallConsole({
   function toggleCat(k: SubmissionStatus) {
     const next = cats.includes(k) ? cats.filter((c) => c !== k) : [...cats, k]
     if (!next.length) return
-    nav(buildUrl({ view, sort, q: search, cats: next }))
+    nav(buildUrl({ view, sort, q: search, cats: next, fields }))
+  }
+
+  function toggleField(k: TextField) {
+    nav(buildUrl({ view, sort, q: search, cats, fields: { ...fields, [k]: !fields[k] } }))
   }
 
   function onAction(lead: Submission, k: LeadActionKey) {
@@ -797,7 +885,7 @@ export function CallConsole({
           >
             <PipelineNav
               active={view}
-              onChange={(k) => nav(buildUrl({ view: k, sort, q: search, cats }))}
+              onChange={(k) => nav(buildUrl({ view: k, sort, q: search, cats, fields }))}
               tabs={tabs}
             />
           </div>
@@ -869,12 +957,14 @@ export function CallConsole({
               {filtersOpen && (
                 <FiltersPopover
                   sort={sort}
-                  fields={sortFields}
+                  sortFields={sortFields}
                   searching={searching}
                   cats={cats}
+                  fields={fields}
                   counts={counts}
-                  onPick={(k) => nav(buildUrl({ view, sort: k, q: search, cats }))}
+                  onPick={(k) => nav(buildUrl({ view, sort: k, q: search, cats, fields }))}
                   onToggleCat={toggleCat}
+                  onToggleField={toggleField}
                   onClose={() => setFiltersOpen(false)}
                 />
               )}
@@ -902,7 +992,7 @@ export function CallConsole({
               </span>
               {hiddenCount > 0 && (
                 <button
-                  onClick={() => nav(buildUrl({ view, sort, q: search, cats: SEARCH_CATEGORIES }))}
+                  onClick={() => nav(buildUrl({ view, sort, q: search, cats: SEARCH_CATEGORIES, fields }))}
                   className="tnum"
                   style={{
                     border: '1px solid var(--border-strong)',
@@ -1011,7 +1101,9 @@ export function CallConsole({
               {searching
                 ? hiddenCount > 0
                   ? `Every match is in a category you have switched off — ${hiddenCount} hidden.`
-                  : 'Nothing matched in any category, even loosely. Try fewer or shorter words.'
+                  : !fields.desc && !fields.tasks
+                    ? 'Nothing matched on vehicle, name, city or email. Project descriptions and estimate tasks are not searched by default — turn them on under Filters.'
+                    : 'Nothing matched in any category, even loosely. Try fewer or shorter words.'
                 : search
                   ? 'Search needs at least two letters.'
                   : 'Triage a lead from the Call Log — move it here with the ⋮ actions menu.'}
@@ -1023,8 +1115,8 @@ export function CallConsole({
           <Pager
             page={page}
             pageCount={pageCount}
-            onGo={(p) => nav(buildUrl({ view, sort, q: search, cats, p }))}
-            hrefFor={(p) => buildUrl({ view, sort, q: search, cats, p })}
+            onGo={(p) => nav(buildUrl({ view, sort, q: search, cats, fields, p }))}
+            hrefFor={(p) => buildUrl({ view, sort, q: search, cats, fields, p })}
           />
         )}
       </main>

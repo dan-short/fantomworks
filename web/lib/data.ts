@@ -5,7 +5,7 @@ import { isSupabaseConfigured } from './supabase/config'
 import { createClient } from './supabase/server'
 import { seedSubmissions, seedDetails } from './seed'
 import { PHOTO_BUCKET, resolvePhotoUrl, storageKey } from './images'
-import { SEARCH_CATEGORIES, searchCollection, searchTokens } from './search'
+import { SEARCH_CATEGORIES, searchCollection, searchTokens, type SearchFields } from './search'
 import type { Submission, DetailStage, DetailsMap, SubmissionStatus } from './types'
 
 const SIGNED_URL_TTL = 60 * 60
@@ -194,6 +194,7 @@ export interface SearchOptions {
   q: string
   view: SubmissionStatus
   cats: SubmissionStatus[]
+  fields: SearchFields
   sort: SortKey
   page: number
 }
@@ -259,6 +260,7 @@ async function searchFallback(opts: SearchOptions): Promise<SearchResult> {
   const matches = searchCollection(
     ((data ?? []) as unknown as Record<string, unknown>[]).map(fromRow),
     searchTokens(opts.q),
+    opts.fields,
     (lead) => ({ lead, stages: [] }),
   )
 
@@ -277,6 +279,8 @@ export async function searchSubmissions(opts: SearchOptions): Promise<SearchResu
       sort_key: opts.sort,
       lim: SEARCH_PAGE_SIZE,
       off: (Math.max(1, opts.page) - 1) * SEARCH_PAGE_SIZE,
+      incl_desc: opts.fields.desc,
+      incl_tasks: opts.fields.tasks,
     })
     if (error) return searchFallback(opts)
 
@@ -294,6 +298,7 @@ export async function searchSubmissions(opts: SearchOptions): Promise<SearchResu
   const matches = searchCollection(
     devSubs().filter((s) => s.status !== 'deleted'),
     searchTokens(opts.q),
+    opts.fields,
     (lead) => ({ lead, stages: details[lead.id] ?? [] }),
   )
   return rankAndPage(matches, opts)
