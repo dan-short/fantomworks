@@ -5,6 +5,7 @@ import { isSupabaseConfigured } from './supabase/config'
 import { createClient } from './supabase/server'
 import { seedSubmissions, seedDetails } from './seed'
 import { PHOTO_BUCKET, resolvePhotoUrl, storageKey } from './images'
+import { SEARCH_CATEGORIES, searchCollection, searchTokens } from './search'
 import type { Submission, DetailStage, DetailsMap, SubmissionStatus } from './types'
 
 const SIGNED_URL_TTL = 60 * 60
@@ -72,9 +73,10 @@ function fromRow(row: Record<string, unknown>): Submission {
   return { ...(row as unknown as Submission), images }
 }
 
-export type SortKey = 'received' | 'name' | 'vehicle' | 'distance'
+export type SortKey = 'relevance' | 'received' | 'name' | 'vehicle' | 'distance'
 
 export const PAGE_SIZE = 50
+export const SEARCH_PAGE_SIZE = 25
 
 // Explicit column projection: fetch only what the app models (the Submission
 // interface + the image_name_* columns folded into `images`). `select('*')`
@@ -155,18 +157,19 @@ export interface SubmissionsPage {
 
 export async function getSubmissions(
   status: SubmissionStatus,
-  opts: { sort?: SortKey; search?: string; page?: number } = {},
+  opts: { sort?: SortKey; page?: number } = {},
 ): Promise<SubmissionsPage> {
   const sort = opts.sort ?? 'received'
-  const search = opts.search?.trim().toLowerCase()
   const page = Math.max(1, opts.page ?? 1)
   const from = (page - 1) * PAGE_SIZE
 
   if (isSupabaseConfigured) {
     const supabase = await createClient()
-    let q = supabase.from('submissions').select(SELECT_COLS, { count: 'exact' }).eq('status', status)
-    if (search) q = q.or(orIlikeFilter(search))
-    q = applySort(q, sort, status).range(from, from + PAGE_SIZE - 1)
+    const q = applySort(
+      supabase.from('submissions').select(SELECT_COLS, { count: 'exact' }).eq('status', status),
+      sort,
+      status,
+    ).range(from, from + PAGE_SIZE - 1)
     const { data, error, count } = await q
     if (error) throw error
     // A computed (non-literal) select string widens supabase-js's row type, so
@@ -177,16 +180,123 @@ export async function getSubmissions(
     return { rows, total: count ?? 0 }
   }
 
-  let rows = devSubs().filter((s) => s.status === status)
-  if (search) {
-    rows = rows.filter((s) =>
-      [s.first_name, s.last_name, s.email, s.make, s.model, s.city]
-        .filter(Boolean)
-        .some((v) => v!.toLowerCase().includes(search)),
-    )
-  }
-  rows = sortSubs(rows, sort, status)
+  const rows = sortSubs(devSubs().filter((s) => s.status === status), sort, status)
   return { rows: rows.slice(from, from + PAGE_SIZE), total: rows.length }
+}
+
+export interface SearchResult {
+  rows: Submission[]
+  total: number
+  counts: Record<string, number>
+}
+
+export interface SearchOptions {
+  q: string
+  view: SubmissionStatus
+  cats: SubmissionStatus[]
+  sort: SortKey
+  page: number
+}
+
+function categoryRank(view: SubmissionStatus): Record<string, number> {
+  const order = [view, ...SEARCH_CATEGORIES.filter((c) => c !== view)]
+  return Object.fromEntries(order.map((c, i) => [c, i]))
+}
+
+function compareInCategory(sort: SortKey, scores: Map<number, number>) {
+  return (a: Submission, b: Submission): number => {
+    switch (sort) {
+      case 'name':
+        return (a.last_name ?? '').localeCompare(b.last_name ?? '')
+      case 'vehicle':
+        return (a.year ?? '').localeCompare(b.year ?? '')
+      case 'distance':
+        return (b.distance_miles ?? 0) - (a.distance_miles ?? 0)
+      case 'received':
+        return (
+          (b.bumped_at ?? '').localeCompare(a.bumped_at ?? '') ||
+          (b.received_date ?? '').localeCompare(a.received_date ?? '')
+        )
+      default:
+        return (
+          (scores.get(b.id) ?? 0) - (scores.get(a.id) ?? 0) ||
+          (b.received_date ?? '').localeCompare(a.received_date ?? '')
+        )
+    }
+  }
+}
+
+function rankAndPage(
+  matches: { lead: Submission; score: number }[],
+  opts: SearchOptions,
+): SearchResult {
+  const counts: Record<string, number> = {}
+  for (const m of matches) counts[m.lead.status] = (counts[m.lead.status] ?? 0) + 1
+
+  const kept = matches.filter((m) => opts.cats.includes(m.lead.status))
+  const scores = new Map(kept.map((m) => [m.lead.id, m.score]))
+  const rank = categoryRank(opts.view)
+  const within = compareInCategory(opts.sort, scores)
+
+  const sorted = kept
+    .map((m) => m.lead)
+    .sort((a, b) => (rank[a.status] ?? 99) - (rank[b.status] ?? 99) || within(a, b) || a.id - b.id)
+
+  const from = (Math.max(1, opts.page) - 1) * SEARCH_PAGE_SIZE
+  return { rows: sorted.slice(from, from + SEARCH_PAGE_SIZE), total: sorted.length, counts }
+}
+
+async function searchFallback(opts: SearchOptions): Promise<SearchResult> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('submissions')
+    .select(SELECT_COLS)
+    .neq('status', 'deleted')
+    .or(orIlikeFilter(opts.q.trim()))
+    .limit(500)
+  if (error) throw error
+
+  const matches = searchCollection(
+    ((data ?? []) as unknown as Record<string, unknown>[]).map(fromRow),
+    searchTokens(opts.q),
+    (lead) => ({ lead, stages: [] }),
+  )
+
+  const result = rankAndPage(matches, opts)
+  await attachImageUrls(result.rows)
+  return result
+}
+
+export async function searchSubmissions(opts: SearchOptions): Promise<SearchResult> {
+  if (isSupabaseConfigured) {
+    const supabase = await createClient()
+    const { data, error } = await supabase.rpc('submissions_search', {
+      q: opts.q,
+      cur_status: opts.view,
+      statuses: opts.cats,
+      sort_key: opts.sort,
+      lim: SEARCH_PAGE_SIZE,
+      off: (Math.max(1, opts.page) - 1) * SEARCH_PAGE_SIZE,
+    })
+    if (error) return searchFallback(opts)
+
+    const envelope = (data ?? {}) as {
+      total?: number
+      counts?: Record<string, number>
+      rows?: Record<string, unknown>[]
+    }
+    const rows = (envelope.rows ?? []).map(fromRow)
+    await attachImageUrls(rows)
+    return { rows, total: envelope.total ?? 0, counts: envelope.counts ?? {} }
+  }
+
+  const details = devDetails()
+  const matches = searchCollection(
+    devSubs().filter((s) => s.status !== 'deleted'),
+    searchTokens(opts.q),
+    (lead) => ({ lead, stages: details[lead.id] ?? [] }),
+  )
+  return rankAndPage(matches, opts)
 }
 
 export async function countByStatus(): Promise<Record<string, number>> {

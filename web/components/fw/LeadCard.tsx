@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 import type { Submission, DetailStage, SubmissionStatus } from '@/lib/types'
 import type { EditSection } from './LeadEditDialog'
+import { highlightParts } from '@/lib/search'
 import { resolvePhotoUrl } from '@/lib/images'
 import { printSubmission } from '@/lib/print-submission'
 import {
@@ -45,6 +46,29 @@ export function lastContact(s: Submission): string | null {
     .map((d) => new Date(d).getTime())
   if (!ds.length) return null
   return new Date(Math.max(...ds)).toISOString().slice(0, 10)
+}
+
+const HighlightContext = React.createContext<string[]>([])
+
+function Hl({ children }: { children: string | null | undefined }) {
+  const tokens = React.useContext(HighlightContext)
+  const text = children ?? ''
+  if (!tokens.length || !text) return <>{text}</>
+  const parts = highlightParts(text, tokens)
+  if (parts.length === 1 && !parts[0].hit) return <>{text}</>
+  return (
+    <>
+      {parts.map((p, i) =>
+        p.hit ? (
+          <mark key={i} className="fw-hl">
+            {p.text}
+          </mark>
+        ) : (
+          <React.Fragment key={i}>{p.text}</React.Fragment>
+        ),
+      )}
+    </>
+  )
 }
 
 function Label({ children }: { children: React.ReactNode }) {
@@ -414,6 +438,7 @@ export function LeadCard({
   compact = false,
   selected = false,
   editMode = false,
+  tokens = [],
   onEditSection,
   onToggleSelect,
   onAction,
@@ -426,6 +451,7 @@ export function LeadCard({
   compact?: boolean
   selected?: boolean
   editMode?: boolean
+  tokens?: string[]
   onEditSection?: (lead: Submission, section: EditSection) => void
   onToggleSelect?: (id: number) => void
   onAction: (lead: Submission, k: LeadActionKey) => void
@@ -445,6 +471,7 @@ export function LeadCard({
       ? 'color-mix(in oklch, var(--steel) 5%, var(--surface-card))'
       : 'var(--surface-card)'
   const last = lastContact(lead)
+  const fullName = [lead.first_name, lead.last_name].filter(Boolean).join(' ')
   const vehicle = [lead.year, lead.make, lead.model].filter(Boolean).join(' ')
   const loc =
     [lead.city, lead.state_country].filter(Boolean).join(', ') +
@@ -465,6 +492,7 @@ export function LeadCard({
 
   if (compact && !expanded) {
     return (
+      <HighlightContext.Provider value={tokens}>
       <div
         style={{
           display: 'flex',
@@ -497,7 +525,7 @@ export function LeadCard({
         >
           <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
             <span style={{ fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 600, color: 'var(--ink)', whiteSpace: 'nowrap' }}>
-              {lead.first_name} {lead.last_name}
+              <Hl>{fullName}</Hl>
             </span>
             {online ? <Badge tone="sky">Online</Badge> : <Badge tone="amber">{lead.added_by || 'Office'}</Badge>}
           </span>
@@ -505,7 +533,9 @@ export function LeadCard({
             <span style={{ color: 'var(--accent)', display: 'flex' }}>
               <Car size={14} />
             </span>
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{vehicle}</span>
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <Hl>{vehicle}</Hl>
+            </span>
           </span>
           <ContactCue last={last} />
           <span className="tnum" style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--muted)', whiteSpace: 'nowrap', textAlign: 'right' }}>
@@ -525,10 +555,12 @@ export function LeadCard({
           style={{ width: 5, alignSelf: 'stretch', background: srcColor }}
         />
       </div>
+      </HighlightContext.Provider>
     )
   }
 
   return (
+    <HighlightContext.Provider value={tokens}>
     <div
       style={{
         display: 'flex',
@@ -560,7 +592,7 @@ export function LeadCard({
           <EditZone editMode={editMode} label="Customer" onClick={() => edit('customer')}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 5 }}>
               <span style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 600, letterSpacing: '.01em', color: 'var(--ink)', lineHeight: 1.05 }}>
-                {lead.first_name} {lead.last_name}
+                <Hl>{fullName}</Hl>
               </span>
               {online ? <Badge tone="sky">Online</Badge> : <Badge tone="amber">{lead.added_by || 'Office'}</Badge>}
             </div>
@@ -570,7 +602,7 @@ export function LeadCard({
               <span style={{ color: 'var(--accent)', display: 'flex' }}>
                 <Car size={16} />
               </span>
-              {vehicle || (editMode ? <span style={{ color: 'var(--faint)', fontWeight: 500 }}>Add vehicle…</span> : '—')}
+              {vehicle ? <Hl>{vehicle}</Hl> : editMode ? <span style={{ color: 'var(--faint)', fontWeight: 500 }}>Add vehicle…</span> : '—'}
             </div>
           </EditZone>
           <EditZone editMode={editMode} label="Customer" onClick={() => edit('customer')} style={{ marginTop: 3 }}>
@@ -579,7 +611,7 @@ export function LeadCard({
               style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: 'var(--muted)', marginTop: 4, fontFamily: 'var(--font-mono)' }}
             >
               <MapPin size={12} />
-              {loc}
+              <Hl>{loc}</Hl>
               <span style={{ color: 'var(--faint)', fontSize: 10 }}>#{lead.legacy_id}</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 1, marginTop: 9, paddingTop: 9, borderTop: '1px dashed var(--border-hairline)' }}>
@@ -599,7 +631,9 @@ export function LeadCard({
               )}
               {lead.email && (
                 <a href={`mailto:${lead.email}`} style={{ textDecoration: 'none' }}>
-                  <Meta icon={<Mail size={13} />}>{lead.email}</Meta>
+                  <Meta icon={<Mail size={13} />}>
+                    <Hl>{lead.email}</Hl>
+                  </Meta>
                 </a>
               )}
               {lead.call_schedule && (
@@ -664,7 +698,7 @@ export function LeadCard({
               <>
                 <Label>Description</Label>
                 <p style={{ margin: '0 0 6px', fontSize: 12.5, lineHeight: 1.55, color: 'var(--ink-2)', textWrap: 'pretty' }}>
-                  {lead.project_description}
+                  <Hl>{lead.project_description}</Hl>
                 </p>
               </>
             ) : editMode ? (
@@ -694,10 +728,12 @@ export function LeadCard({
                           flexShrink: 0,
                         }}
                       >
-                        {st.label}
+                        <Hl>{st.label}</Hl>
                       </span>
                     )}
-                    <span style={{ flex: 1, color: 'var(--muted)', lineHeight: 1.5, textWrap: 'pretty' }}>{st.description}</span>
+                    <span style={{ flex: 1, color: 'var(--muted)', lineHeight: 1.5, textWrap: 'pretty' }}>
+                      <Hl>{st.description}</Hl>
+                    </span>
                     {!isOffice && (
                       <span className="tnum" style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, color: 'var(--faint)', whiteSpace: 'nowrap' }}>
                         {st.parts_cost ? `$${st.parts_cost.toLocaleString('en-US')}` : ''}
@@ -832,5 +868,6 @@ export function LeadCard({
         style={{ width: 5, alignSelf: 'stretch', background: srcColor }}
       />
     </div>
+    </HighlightContext.Provider>
   )
 }
