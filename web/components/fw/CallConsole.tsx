@@ -20,6 +20,7 @@ import {
   MailPlus,
 } from 'lucide-react'
 import type { Submission, DetailsMap, EmailsMap, SubmissionStatus } from '@/lib/types'
+import { NoteBody } from './NoteBody'
 import { STATUS_VIEWS } from '@/lib/types'
 import type { SortKey } from '@/lib/data'
 import {
@@ -32,7 +33,7 @@ import {
   type TextField,
 } from '@/lib/search'
 import { resolvePhotoUrl } from '@/lib/images'
-import { logCallAttempt, setStatus, addNote, bump } from '@/app/actions/submissions'
+import { logCallAttempt, clearCallAttempt, setStatus, addNote, bump } from '@/app/actions/submissions'
 import { signOut } from '@/app/login/actions'
 import { clearSavedLogin } from '@/lib/saved-login'
 import { LeadCard, type LeadActionKey } from './LeadCard'
@@ -662,6 +663,9 @@ export function CallConsole({
     if (k === 'call1') return run(() => logCallAttempt(lead.id, 1))
     if (k === 'call2') return run(() => logCallAttempt(lead.id, 2))
     if (k === 'call3') return run(() => logCallAttempt(lead.id, 3))
+    if (k === 'clear1') return run(() => clearCallAttempt(lead.id, 1))
+    if (k === 'clear2') return run(() => clearCallAttempt(lead.id, 2))
+    if (k === 'clear3') return run(() => clearCallAttempt(lead.id, 3))
     if (k === 'email') return nav(`/calls/${lead.id}/email`)
     if (k === 'bump') return run(() => bump(lead.id))
     return run(() => setStatus(lead.id, k as SubmissionStatus))
@@ -1179,9 +1183,7 @@ export function CallConsole({
                 <div className="fw-label" style={{ marginBottom: 5 }}>
                   Existing notes
                 </div>
-                <p style={{ margin: 0, fontSize: 12, lineHeight: 1.5, color: 'var(--ink-2)', background: 'var(--paper-sunk)', padding: '8px 10px', borderRadius: 'var(--radius-sm)', whiteSpace: 'pre-wrap' }}>
-                  {noteFor.notes}
-                </p>
+                <NoteBody notes={noteFor.notes} style={{ padding: '8px 10px', borderLeft: 'none' }} />
               </div>
             )}
             <textarea

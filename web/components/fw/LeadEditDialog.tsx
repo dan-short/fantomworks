@@ -1,7 +1,7 @@
 'use client'
 import * as React from 'react'
 import Image from 'next/image'
-import { Camera, Trash, Plus, User } from 'lucide-react'
+import { Camera, Trash, Plus, User, X } from 'lucide-react'
 import type { Submission, DetailStage } from '@/lib/types'
 import { FwButton, FwDialog, Spinner } from './primitives'
 import {
@@ -18,9 +18,10 @@ import { VEHICLES, MAKES } from '@/lib/vehicles'
 import { formatPhone, phoneOk, zipOk, numOk, parseNum, yearOk, parseTaskList } from '@/lib/form-utils'
 import { PHOTO_BUCKET, resolvePhotoUrl } from '@/lib/images'
 import { uploadPhoto } from '@/lib/photo-upload'
-import { updateLead, setStages, setPhotos, type StageInput } from '@/app/actions/submissions'
+import { updateLead, setStages, setPhotos, setNotes, type StageInput } from '@/app/actions/submissions'
+import { noteDateLabel, parseNotes, serializeNotes } from '@/lib/notes'
 
-export type EditSection = 'customer' | 'vehicle' | 'tasks' | 'history' | 'photos'
+export type EditSection = 'customer' | 'vehicle' | 'tasks' | 'history' | 'photos' | 'notes'
 
 const SECTION_TITLE: Record<EditSection, string> = {
   customer: 'Edit customer',
@@ -28,6 +29,7 @@ const SECTION_TITLE: Record<EditSection, string> = {
   tasks: 'Edit tasks',
   history: 'Edit history',
   photos: 'Edit photos',
+  notes: 'Edit notes',
 }
 
 const monoStyle: React.CSSProperties = { fontFamily: 'var(--font-mono)' }
@@ -71,6 +73,8 @@ export function LeadEditDialog({
   }))
 
   const [history, setHistory] = React.useState(lead.project_description ?? '')
+
+  const [notes, setNoteList] = React.useState(() => parseNotes(lead.notes))
 
   const [tasksRaw, setTasksRaw] = React.useState(() => {
     const descs = stages.map((s) => s.description ?? '').filter((d) => d.trim())
@@ -163,6 +167,8 @@ export function LeadEditDialog({
         })
       } else if (section === 'history') {
         await updateLead(lead.id, { project_description: history.trim() || null })
+      } else if (section === 'notes') {
+        await setNotes(lead.id, serializeNotes(notes))
       } else if (section === 'tasks') {
         const complete = parseTaskList(tasksRaw)
         const n = Math.max(1, complete.length)
@@ -334,6 +340,48 @@ export function LeadEditDialog({
         <Field label="History & notes">
           <HistoryTextarea value={history} onChange={setHistory} minHeight={180} placeholder="The car’s history, condition, what’s been done, what they’re after…" />
         </Field>
+      )}
+
+      {section === 'notes' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {notes.length === 0 && (
+            <div style={{ fontSize: 12, color: 'var(--faint)' }}>No notes on this lead yet.</div>
+          )}
+          {notes.map((n, i) => (
+            <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                <span
+                  style={{
+                    fontFamily: 'var(--font-display)',
+                    fontSize: 10,
+                    fontWeight: 600,
+                    letterSpacing: '.08em',
+                    textTransform: 'uppercase',
+                    color: 'var(--steel)',
+                  }}
+                >
+                  {n.date ? noteDateLabel(n.date) : 'Undated'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setNoteList((list) => list.filter((_, j) => j !== i))}
+                  title="Remove note"
+                  style={{ background: 'none', border: 0, cursor: 'pointer', color: 'var(--faint)', display: 'flex', padding: 2 }}
+                >
+                  <X size={13} />
+                </button>
+              </div>
+              <textarea
+                className="fw-ta"
+                value={n.text}
+                rows={3}
+                onChange={(e) =>
+                  setNoteList((list) => list.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)))
+                }
+              />
+            </div>
+          ))}
+        </div>
       )}
 
       {section === 'tasks' && (

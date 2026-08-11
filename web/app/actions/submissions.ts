@@ -3,6 +3,7 @@ import { revalidatePath } from 'next/cache'
 import { isSupabaseConfigured } from '@/lib/supabase/config'
 import { createClient } from '@/lib/supabase/server'
 import { devStore } from '@/lib/data'
+import { stampNote } from '@/lib/notes'
 import type { DetailStage, SubmissionStatus } from '@/lib/types'
 
 async function apply(id: number, patch: Record<string, unknown>) {
@@ -115,6 +116,14 @@ export async function logCallAttempt(id: number, which: 1 | 2 | 3) {
   await apply(id, { [CALL_COLS[which - 1]]: new Date().toISOString() })
 }
 
+export async function clearCallAttempt(id: number, which: 1 | 2 | 3) {
+  await apply(id, { [CALL_COLS[which - 1]]: null })
+}
+
+export async function setNotes(id: number, notes: string) {
+  await apply(id, { notes: notes.trim() || null })
+}
+
 export async function logEmailAttempt(id: number) {
   await apply(id, { email_attempt: new Date().toISOString() })
 }
@@ -124,13 +133,14 @@ export async function setStatus(id: number, status: SubmissionStatus) {
 }
 
 export async function addNote(id: number, note: string) {
+  const stamped = stampNote(note)
   const supabase = isSupabaseConfigured ? await createClient() : null
   if (supabase) {
     const { data } = await supabase.from('submissions').select('notes').eq('id', id).single()
     const existing = (data?.notes as string | null) ?? ''
-    await apply(id, { notes: existing ? `${existing}\n${note}` : note })
+    await apply(id, { notes: existing ? `${existing}\n${stamped}` : stamped })
   } else {
-    await apply(id, { notes: note })
+    await apply(id, { notes: stamped })
   }
 }
 

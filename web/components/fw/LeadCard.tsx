@@ -19,10 +19,12 @@ import {
   ChevronRight,
   Pencil,
   Printer,
+  X,
 } from 'lucide-react'
 import type { Submission, DetailStage, SentEmail, SubmissionStatus } from '@/lib/types'
 import type { EditSection } from './LeadEditDialog'
 import { SentEmailList } from './SentEmails'
+import { NoteBody } from './NoteBody'
 import { highlightParts } from '@/lib/search'
 import { resolvePhotoUrl } from '@/lib/images'
 import { printSubmission } from '@/lib/print-submission'
@@ -39,7 +41,16 @@ import {
 
 export const SHOP_RATE = 150
 
-export type LeadActionKey = 'call1' | 'call2' | 'call3' | 'email' | 'bump' | SubmissionStatus
+export type LeadActionKey =
+  | 'call1'
+  | 'call2'
+  | 'call3'
+  | 'clear1'
+  | 'clear2'
+  | 'clear3'
+  | 'email'
+  | 'bump'
+  | SubmissionStatus
 
 export function lastContact(s: Submission): string | null {
   const ds = [s.call_attempt_one, s.call_attempt_two, s.call_attempt_three, s.email_attempt]
@@ -115,13 +126,17 @@ function AttemptRow({
   label,
   icon,
   onLog,
+  onClear,
   reopen,
+  editMode,
 }: {
   done: string | null
   label: string
   icon: React.ReactNode
   onLog: () => void
+  onClear?: () => void
   reopen?: boolean
+  editMode?: boolean
 }) {
   if (done) {
     const content = (
@@ -139,6 +154,30 @@ function AttemptRow({
       fontFamily: 'var(--font-mono)',
       padding: '4px 2px',
     }
+    if (editMode && onClear) {
+      return (
+        <button
+          className="tnum"
+          onClick={(e) => {
+            e.stopPropagation()
+            onClear()
+          }}
+          title={`Remove ${label.toLowerCase()}`}
+          style={{ ...rowStyle, width: '100%', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left' }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--paper-sunk)')}
+          onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+        >
+          {content}
+          <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 3, color: 'var(--age-cold)' }}>
+            <X size={11} />
+            <span style={{ fontSize: 10, fontFamily: 'var(--font-display)', letterSpacing: '.06em', textTransform: 'uppercase' }}>
+              Remove
+            </span>
+          </span>
+        </button>
+      )
+    }
+
     if (!reopen) {
       return (
         <div className="tnum" style={rowStyle}>
@@ -802,9 +841,9 @@ export function LeadCard({
                 <ContactCue last={last} />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                <AttemptRow done={lead.call_attempt_one} label="Call 1" icon={<Phone size={13} />} onLog={() => act('call1')} />
-                <AttemptRow done={lead.call_attempt_two} label="Call 2" icon={<Phone size={13} />} onLog={() => act('call2')} />
-                <AttemptRow done={lead.call_attempt_three} label="Call 3" icon={<Phone size={13} />} onLog={() => act('call3')} />
+                <AttemptRow done={lead.call_attempt_one} label="Call 1" icon={<Phone size={13} />} onLog={() => act('call1')} onClear={() => act('clear1')} editMode={editMode} />
+                <AttemptRow done={lead.call_attempt_two} label="Call 2" icon={<Phone size={13} />} onLog={() => act('call2')} onClear={() => act('clear2')} editMode={editMode} />
+                <AttemptRow done={lead.call_attempt_three} label="Call 3" icon={<Phone size={13} />} onLog={() => act('call3')} onClear={() => act('clear3')} editMode={editMode} />
                 <AttemptRow done={lead.email_attempt} label="Email" icon={<Mail size={13} />} onLog={() => act('email')} reopen />
               </div>
             </div>
@@ -818,26 +857,16 @@ export function LeadCard({
             </div>
           )}
 
-          {lead.notes && (
-            <div style={{ marginTop: 10 }}>
-              <Label>Notes</Label>
-              <p
-                style={{
-                  margin: 0,
-                  fontSize: 12,
-                  lineHeight: 1.5,
-                  color: 'var(--ink-2)',
-                  background: 'var(--paper-sunk)',
-                  padding: '7px 9px',
-                  borderRadius: 'var(--radius-sm)',
-                  borderLeft: '2px solid var(--steel)',
-                  whiteSpace: 'pre-wrap',
-                }}
-              >
-                {lead.notes}
-              </p>
-            </div>
-          )}
+          <EditZone editMode={editMode} label="Notes" onClick={() => edit('notes')}>
+            {lead.notes ? (
+              <div style={{ marginTop: 10 }}>
+                <Label>Notes</Label>
+                <NoteBody notes={lead.notes} />
+              </div>
+            ) : editMode ? (
+              <div style={{ fontSize: 12, color: 'var(--faint)', padding: '2px 0 6px', marginTop: 10 }}>Add note…</div>
+            ) : null}
+          </EditZone>
 
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8, marginTop: 'auto', paddingTop: 12 }}>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>

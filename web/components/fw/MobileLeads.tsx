@@ -19,6 +19,7 @@ import {
 import type { Submission, DetailStage, SentEmail } from '@/lib/types'
 import type { EditSection } from './LeadEditDialog'
 import { SentEmailList } from './SentEmails'
+import { NoteBody } from './NoteBody'
 import { resolvePhotoUrl } from '@/lib/images'
 import { printSubmission } from '@/lib/print-submission'
 import { LEAD_MENU, SHOP_RATE, lastContact, type LeadActionKey } from './LeadCard'
@@ -497,21 +498,7 @@ export function MobileLeadSheet({
 
           {lead.notes && (
             <SheetSection label="Notes">
-              <p
-                style={{
-                  margin: 0,
-                  fontSize: 12.5,
-                  lineHeight: 1.55,
-                  color: 'var(--ink-2)',
-                  background: 'var(--paper-sunk)',
-                  padding: '8px 10px',
-                  borderRadius: 'var(--radius-sm)',
-                  borderLeft: '2px solid var(--steel)',
-                  whiteSpace: 'pre-wrap',
-                }}
-              >
-                {lead.notes}
-              </p>
+              <NoteBody notes={lead.notes} style={{ fontSize: 12.5, lineHeight: 1.55, padding: '8px 10px' }} />
             </SheetSection>
           )}
 
