@@ -65,6 +65,18 @@ export interface DetailStage {
 
 export type DetailsMap = Record<number, DetailStage[]>
 
+export interface SentEmail {
+  id: number
+  template_label: string | null
+  to_email: string
+  subject: string
+  body_text: string
+  sent_at: string | null
+  sent_by: string | null
+}
+
+export type EmailsMap = Record<number, SentEmail[]>
+
 export const STATUS_VIEWS: {
   key: SubmissionStatus
   label: string

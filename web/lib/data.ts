@@ -6,7 +6,7 @@ import { createClient } from './supabase/server'
 import { seedSubmissions, seedDetails } from './seed'
 import { PHOTO_BUCKET, resolvePhotoUrl, storageKey } from './images'
 import { SEARCH_CATEGORIES, searchCollection, searchTokens, type SearchFields } from './search'
-import type { Submission, DetailStage, DetailsMap, SubmissionStatus } from './types'
+import type { Submission, DetailStage, DetailsMap, EmailsMap, SentEmail, SubmissionStatus } from './types'
 
 const SIGNED_URL_TTL = 60 * 60
 
@@ -389,6 +389,36 @@ export async function getDetailStagesFor(ids: number[]): Promise<DetailsMap> {
   const all = devDetails()
   const map: DetailsMap = {}
   for (const id of ids) if (all[id]?.length) map[id] = all[id]
+  return map
+}
+
+function toSentEmail(row: Record<string, unknown>): SentEmail {
+  return {
+    id: row.id as number,
+    template_label: (row.template_label ?? null) as string | null,
+    to_email: (row.to_email ?? '') as string,
+    subject: (row.subject ?? '') as string,
+    body_text: (row.body_text ?? '') as string,
+    sent_at: (row.sent_at ?? null) as string | null,
+    sent_by: (row.sent_by ?? null) as string | null,
+  }
+}
+
+export async function getEmailsFor(ids: number[]): Promise<EmailsMap> {
+  if (ids.length === 0 || !isSupabaseConfigured) return {}
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('submission_emails')
+    .select('id, submission_id, template_label, to_email, subject, body_text, sent_at, sent_by')
+    .in('submission_id', ids)
+    .not('sent_at', 'is', null)
+    .order('created_at', { ascending: false })
+  if (error) return {}
+  const map: EmailsMap = {}
+  for (const row of data ?? []) {
+    const sid = (row as { submission_id: number }).submission_id
+    ;(map[sid] ??= []).push(toSentEmail(row))
+  }
   return map
 }
 

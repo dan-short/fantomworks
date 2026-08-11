@@ -20,8 +20,9 @@ import {
   Pencil,
   Printer,
 } from 'lucide-react'
-import type { Submission, DetailStage, SubmissionStatus } from '@/lib/types'
+import type { Submission, DetailStage, SentEmail, SubmissionStatus } from '@/lib/types'
 import type { EditSection } from './LeadEditDialog'
+import { SentEmailList } from './SentEmails'
 import { highlightParts } from '@/lib/search'
 import { resolvePhotoUrl } from '@/lib/images'
 import { printSubmission } from '@/lib/print-submission'
@@ -435,6 +436,7 @@ function EditZone({
 export function LeadCard({
   lead,
   stages,
+  emails,
   compact = false,
   selected = false,
   editMode = false,
@@ -448,6 +450,7 @@ export function LeadCard({
 }: {
   lead: Submission
   stages: DetailStage[]
+  emails: SentEmail[]
   compact?: boolean
   selected?: boolean
   editMode?: boolean
@@ -807,6 +810,13 @@ export function LeadCard({
             </div>
             <Kebab onAction={act} onConfirm={confirm} />
           </div>
+
+          {emails.length > 0 && (
+            <div style={{ marginTop: 10 }}>
+              <Label>Emails Sent</Label>
+              <SentEmailList emails={emails} />
+            </div>
+          )}
 
           {lead.notes && (
             <div style={{ marginTop: 10 }}>

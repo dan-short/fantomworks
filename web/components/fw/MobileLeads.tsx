@@ -16,8 +16,9 @@ import {
   Printer,
   X,
 } from 'lucide-react'
-import type { Submission, DetailStage } from '@/lib/types'
+import type { Submission, DetailStage, SentEmail } from '@/lib/types'
 import type { EditSection } from './LeadEditDialog'
+import { SentEmailList } from './SentEmails'
 import { resolvePhotoUrl } from '@/lib/images'
 import { printSubmission } from '@/lib/print-submission'
 import { LEAD_MENU, SHOP_RATE, lastContact, type LeadActionKey } from './LeadCard'
@@ -229,6 +230,7 @@ function ContactRow({ href, icon, primary, secondary }: { href: string; icon: Re
 export function MobileLeadSheet({
   lead,
   stages,
+  emails,
   onClose,
   onAction,
   onAddNote,
@@ -238,6 +240,7 @@ export function MobileLeadSheet({
 }: {
   lead: Submission
   stages: DetailStage[]
+  emails: SentEmail[]
   onClose: () => void
   onAction: (k: LeadActionKey) => void
   onAddNote: () => void
@@ -485,6 +488,12 @@ export function MobileLeadSheet({
               <div style={{ fontSize: 12, color: 'var(--faint)' }}>No photos</div>
             )}
           </SheetSection>
+
+          {emails.length > 0 && (
+            <SheetSection label="Emails Sent">
+              <SentEmailList emails={emails} />
+            </SheetSection>
+          )}
 
           {lead.notes && (
             <SheetSection label="Notes">

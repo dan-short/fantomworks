@@ -3,7 +3,7 @@ import 'server-only'
 import { revalidatePath } from 'next/cache'
 import { isSupabaseConfigured } from '@/lib/supabase/config'
 import { createClient } from '@/lib/supabase/server'
-import { devStore, getSubmission } from '@/lib/data'
+import { devStore } from '@/lib/data'
 import { isStatus, type SubmissionStatus } from '@/lib/types'
 import { createResendClient } from '@/lib/email/client'
 import { isEmailConfigured, staffMailFrom, staffMailReplyTo } from '@/lib/email/config'
@@ -18,17 +18,6 @@ export type SendLeadEmailInput = EmailParts & {
 }
 
 export type SendResult = { ok: true } | { ok: false; error: string }
-
-function emailNote(parts: EmailParts, to: string, templateLabel: string, text: string) {
-  const sent = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-  const label = templateLabel.trim()
-  const heading = label ? `Email sent ${sent} — ${label}` : `Email sent ${sent}`
-  return [heading, `To: ${to}`, `Subject: ${parts.subject}`, '', text].join('\n')
-}
-
-function appendNote(existing: string | null | undefined, note: string) {
-  return existing ? `${existing}\n\n${note}` : note
-}
 
 export async function sendLeadEmail(input: SendLeadEmailInput): Promise<SendResult> {
   const parts: EmailParts = {
@@ -45,13 +34,10 @@ export async function sendLeadEmail(input: SendLeadEmailInput): Promise<SendResu
   if (!isEmailConfigured) return { ok: false, error: 'Email is not configured — RESEND_API_KEY is missing.' }
 
   const text = composeText(parts)
-  const note = emailNote(parts, to, input.templateLabel, text)
 
   if (!isSupabaseConfigured) {
-    const current = await getSubmission(input.submissionId)
     devStore.update(input.submissionId, {
       email_attempt: new Date().toISOString(),
-      notes: appendNote(current?.notes, note),
       ...(applyStatus ? { status: applyStatus, status_changed_at: new Date().toISOString() } : {}),
     })
     revalidatePath('/calls')
@@ -104,16 +90,7 @@ export async function sendLeadEmail(input: SendLeadEmailInput): Promise<SendResu
       .eq('id', logRow.id)
   }
 
-  const { data: current } = await supabase
-    .from('submissions')
-    .select('notes')
-    .eq('id', input.submissionId)
-    .single()
-
-  const patch: Record<string, unknown> = {
-    email_attempt: new Date().toISOString(),
-    notes: appendNote(current?.notes as string | null, note),
-  }
+  const patch: Record<string, unknown> = { email_attempt: new Date().toISOString() }
   if (applyStatus) patch.status = applyStatus
   const { error: updateError } = await supabase.from('submissions').update(patch).eq('id', input.submissionId)
   if (updateError) console.error('[email] sent but failed to update lead', input.submissionId, updateError.message)

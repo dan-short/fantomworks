@@ -19,7 +19,7 @@ import {
   Check,
   MailPlus,
 } from 'lucide-react'
-import type { Submission, DetailsMap, SubmissionStatus } from '@/lib/types'
+import type { Submission, DetailsMap, EmailsMap, SubmissionStatus } from '@/lib/types'
 import { STATUS_VIEWS } from '@/lib/types'
 import type { SortKey } from '@/lib/data'
 import {
@@ -523,6 +523,7 @@ type Confirming = { title: string; message: string; danger?: boolean; label: str
 export function CallConsole({
   rows,
   details,
+  emails,
   counts,
   view,
   sort,
@@ -540,6 +541,7 @@ export function CallConsole({
 }: {
   rows: Submission[]
   details: DetailsMap
+  emails: EmailsMap
   counts: Record<string, number>
   view: SubmissionStatus
   sort: SortKey
@@ -1047,6 +1049,7 @@ export function CallConsole({
                       key={l.id}
                       lead={l}
                       stages={details[l.id] ?? []}
+                      emails={emails[l.id] ?? []}
                       compact={density === 'compact'}
                       selected={sel.has(l.id)}
                       editMode={editMode}
@@ -1125,6 +1128,7 @@ export function CallConsole({
         <MobileLeadSheet
           lead={sheetLead}
           stages={details[sheetLead.id] ?? []}
+          emails={emails[sheetLead.id] ?? []}
           onClose={() => setSheetId(null)}
           onAction={(k) => onAction(sheetLead, k)}
           onAddNote={() => {

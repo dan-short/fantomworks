@@ -1,6 +1,7 @@
 import {
   getSubmissions,
   getDetailStagesFor,
+  getEmailsFor,
   countByStatus,
   searchSubmissions,
   PAGE_SIZE,
@@ -54,7 +55,8 @@ export default async function CallsPage({
     counts = statusCounts
   }
 
-  const details = await getDetailStagesFor(rows.map((s) => s.id))
+  const ids = rows.map((s) => s.id)
+  const [details, emails] = await Promise.all([getDetailStagesFor(ids), getEmailsFor(ids)])
 
   const size = searching ? SEARCH_PAGE_SIZE : PAGE_SIZE
   const pageCount = Math.max(1, Math.ceil(total / size))
@@ -74,6 +76,7 @@ export default async function CallsPage({
     <CallConsole
       rows={rows}
       details={details}
+      emails={emails}
       counts={counts}
       view={view}
       sort={sort}
