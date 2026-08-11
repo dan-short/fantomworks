@@ -20,10 +20,13 @@ order by received_date
 limit 25;
 
 -- Step 2: soft delete, matching what the app's Delete button does.
--- Reversible: set status back to 'new' for anything caught by mistake.
+-- status_changed_at is maintained by the submissions_set_status_changed_at
+-- trigger, so it is not set here.
+-- Prefer scripts/purge-old-call-log.mjs: it records the affected ids, which is
+-- what makes an undo exact. Reversing by this predicate alone would also
+-- restore rows that were already 'deleted' beforehand.
 update submissions
-set status = 'deleted',
-    status_changed_at = now()
+set status = 'deleted'
 where status = 'new'
   and received_date < current_date - interval '7 years';
 
