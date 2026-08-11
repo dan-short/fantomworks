@@ -851,7 +851,7 @@ export function LeadCard({
           </div>
 
           {emails.length > 0 && (
-            <div style={{ marginTop: 10 }}>
+            <div style={{ marginTop: 10 }} data-tour="emails-sent">
               <Label>Emails Sent</Label>
               <SentEmailList emails={emails} />
             </div>
@@ -859,7 +859,7 @@ export function LeadCard({
 
           <EditZone editMode={editMode} label="Notes" onClick={() => edit('notes')}>
             {lead.notes ? (
-              <div style={{ marginTop: 10 }}>
+              <div style={{ marginTop: 10 }} data-tour="notes">
                 <Label>Notes</Label>
                 <NoteBody notes={lead.notes} />
               </div>

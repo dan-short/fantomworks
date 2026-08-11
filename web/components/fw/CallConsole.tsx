@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 import type { Submission, DetailsMap, EmailsMap, SubmissionStatus } from '@/lib/types'
 import { NoteBody } from './NoteBody'
+import { FeatureTour } from './FeatureTour'
 import { STATUS_VIEWS } from '@/lib/types'
 import type { SortKey } from '@/lib/data'
 import {
@@ -900,6 +901,7 @@ export function CallConsole({
               onClick={() => setEditMode((e) => !e)}
               title="Toggle edit mode — click any part of a lead to edit it"
               className="fw-hide-mobile"
+              data-tour="edit-mode"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -1144,6 +1146,8 @@ export function CallConsole({
           onEditSection={(section) => setEditing({ lead: sheetLead, section })}
         />
       )}
+
+      <FeatureTour />
 
       {editing && (
         <LeadEditDialog
