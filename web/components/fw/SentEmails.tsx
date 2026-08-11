@@ -11,7 +11,7 @@ function heading(email: SentEmail): string {
 }
 
 function SentEmailRow({ email }: { email: SentEmail }) {
-  const [open, setOpen] = React.useState(false)
+  const [open, setOpen] = React.useState(true)
   const Chevron = open ? ChevronDown : ChevronRight
 
   return (
