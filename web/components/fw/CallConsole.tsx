@@ -892,7 +892,7 @@ export function CallConsole({
           >
             <PipelineNav
               active={view}
-              onChange={(k) => nav(buildUrl({ view: k, sort, q: search, cats, fields }))}
+              onChange={(k) => nav(buildUrl({ view: k, sort: searching ? undefined : sort, q: '', cats, fields }))}
               tabs={tabs}
             />
           </div>
