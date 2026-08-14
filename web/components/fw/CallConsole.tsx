@@ -41,6 +41,7 @@ import { LeadCard, type LeadActionKey } from './LeadCard'
 import { MobileLeadRow, MobileLeadSheet } from './MobileLeads'
 import { LeadEditDialog, type EditSection } from './LeadEditDialog'
 import { PipelineNav, FwButton, FwDialog } from './primitives'
+import { InstallButton } from './InstallButton'
 
 const SORT_FIELDS: { k: SortKey; label: string; ascPhrase: string; descPhrase: string }[] = [
   { k: 'received', label: 'Received', ascPhrase: 'Oldest first', descPhrase: 'Newest first' },
@@ -890,6 +891,7 @@ export function CallConsole({
                 {email}
               </span>
             )}
+            <InstallButton />
             <button
               onClick={() => router.push('/new')}
               title="Log a phoned-in or walk-in lead"

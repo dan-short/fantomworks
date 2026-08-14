@@ -25,7 +25,7 @@ const ITEMS = [
   {
     icon: <Smartphone size={15} />,
     title: 'Installable as an app',
-    body: 'The Call Log can now be installed to your phone or desktop like a native app — look for "Install" or "Add to Home Screen" in the browser menu. It opens in its own window, no address bar.',
+    body: 'The Call Log can now be installed to your phone or desktop like a native app — it opens in its own window, no address bar. Look for the Install button next to New Lead. On iPhone/iPad it walks you through adding it from Safari’s share menu instead, since iOS doesn’t support one-tap install.',
   },
 ]
 
