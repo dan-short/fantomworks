@@ -7,6 +7,7 @@ import { seedSubmissions, seedDetails } from './seed'
 import { PHOTO_BUCKET, resolvePhotoUrl, storageKey } from './images'
 import { SEARCH_CATEGORIES, searchCollection, searchTokens, type SearchFields } from './search'
 import type { Submission, DetailStage, DetailsMap, EmailsMap, SentEmail, SubmissionStatus } from './types'
+import { defaultSortDir, type SortKey, type SortDir } from './sort'
 
 const SIGNED_URL_TTL = 60 * 60
 
@@ -73,7 +74,8 @@ function fromRow(row: Record<string, unknown>): Submission {
   return { ...(row as unknown as Submission), images }
 }
 
-export type SortKey = 'relevance' | 'received' | 'name' | 'vehicle' | 'distance'
+export type { SortKey, SortDir } from './sort'
+export { defaultSortDir } from './sort'
 
 export const PAGE_SIZE = 50
 export const SEARCH_PAGE_SIZE = 25
@@ -107,22 +109,24 @@ export function sortsByArchivedDate(status: SubmissionStatus, sort: SortKey): bo
   return status === 'archived' && sort === 'received'
 }
 
-function sortSubs(rows: Submission[], sort: SortKey, status: SubmissionStatus): Submission[] {
+function sortSubs(rows: Submission[], sort: SortKey, dir: SortDir, status: SubmissionStatus): Submission[] {
   const r = [...rows]
+  // Ascending-first base comparators, flipped by `sign` for desc.
+  const sign = dir === 'asc' ? 1 : -1
   switch (sort) {
     case 'name':
-      return r.sort((a, b) => (a.last_name ?? '').localeCompare(b.last_name ?? ''))
+      return r.sort((a, b) => sign * (a.last_name ?? '').localeCompare(b.last_name ?? ''))
     case 'vehicle':
-      return r.sort((a, b) => (a.year ?? '').localeCompare(b.year ?? ''))
+      return r.sort((a, b) => sign * (a.year ?? '').localeCompare(b.year ?? ''))
     case 'distance':
-      return r.sort((a, b) => (b.distance_miles ?? 0) - (a.distance_miles ?? 0))
+      return r.sort((a, b) => sign * ((a.distance_miles ?? 0) - (b.distance_miles ?? 0)))
     default: {
       const archivedFirst = sortsByArchivedDate(status, sort)
       return r.sort(
         (a, b) =>
-          (b.bumped_at ?? '').localeCompare(a.bumped_at ?? '') ||
-          (archivedFirst ? (b.status_changed_at ?? '').localeCompare(a.status_changed_at ?? '') : 0) ||
-          (b.received_date ?? '').localeCompare(a.received_date ?? ''),
+          sign * (a.bumped_at ?? '').localeCompare(b.bumped_at ?? '') ||
+          (archivedFirst ? sign * (a.status_changed_at ?? '').localeCompare(b.status_changed_at ?? '') : 0) ||
+          sign * (a.received_date ?? '').localeCompare(b.received_date ?? ''),
       )
     }
   }
@@ -131,21 +135,23 @@ function sortSubs(rows: Submission[], sort: SortKey, status: SubmissionStatus): 
 function applySort<T extends { order: (col: string, o?: { ascending?: boolean; nullsFirst?: boolean }) => T }>(
   q: T,
   sort: SortKey,
+  dir: SortDir,
   status: SubmissionStatus,
 ): T {
+  const ascending = dir === 'asc'
   switch (sort) {
     case 'name':
-      return q.order('last_name', { ascending: true })
+      return q.order('last_name', { ascending })
     case 'vehicle':
-      return q.order('year', { ascending: true })
+      return q.order('year', { ascending })
     case 'distance':
-      return q.order('distance_miles', { ascending: false, nullsFirst: false })
+      return q.order('distance_miles', { ascending, nullsFirst: false })
     default: {
-      let ordered = q.order('bumped_at', { ascending: false, nullsFirst: false })
+      let ordered = q.order('bumped_at', { ascending, nullsFirst: false })
       if (sortsByArchivedDate(status, sort)) {
-        ordered = ordered.order('status_changed_at', { ascending: false, nullsFirst: false })
+        ordered = ordered.order('status_changed_at', { ascending, nullsFirst: false })
       }
-      return ordered.order('received_date', { ascending: false, nullsFirst: false })
+      return ordered.order('received_date', { ascending, nullsFirst: false })
     }
   }
 }
@@ -157,9 +163,10 @@ export interface SubmissionsPage {
 
 export async function getSubmissions(
   status: SubmissionStatus,
-  opts: { sort?: SortKey; page?: number } = {},
+  opts: { sort?: SortKey; dir?: SortDir; page?: number } = {},
 ): Promise<SubmissionsPage> {
   const sort = opts.sort ?? 'received'
+  const dir = opts.dir ?? defaultSortDir(sort, status)
   const page = Math.max(1, opts.page ?? 1)
   const from = (page - 1) * PAGE_SIZE
 
@@ -168,6 +175,7 @@ export async function getSubmissions(
     const q = applySort(
       supabase.from('submissions').select(SELECT_COLS, { count: 'exact' }).eq('status', status),
       sort,
+      dir,
       status,
     ).range(from, from + PAGE_SIZE - 1)
     const { data, error, count } = await q
@@ -180,7 +188,7 @@ export async function getSubmissions(
     return { rows, total: count ?? 0 }
   }
 
-  const rows = sortSubs(devSubs().filter((s) => s.status === status), sort, status)
+  const rows = sortSubs(devSubs().filter((s) => s.status === status), sort, dir, status)
   return { rows: rows.slice(from, from + PAGE_SIZE), total: rows.length }
 }
 
@@ -196,6 +204,7 @@ export interface SearchOptions {
   cats: SubmissionStatus[]
   fields: SearchFields
   sort: SortKey
+  dir: SortDir
   page: number
 }
 
@@ -204,19 +213,20 @@ function categoryRank(view: SubmissionStatus): Record<string, number> {
   return Object.fromEntries(order.map((c, i) => [c, i]))
 }
 
-function compareInCategory(sort: SortKey, scores: Map<number, number>) {
+function compareInCategory(sort: SortKey, dir: SortDir, scores: Map<number, number>) {
+  const sign = dir === 'asc' ? 1 : -1
   return (a: Submission, b: Submission): number => {
     switch (sort) {
       case 'name':
-        return (a.last_name ?? '').localeCompare(b.last_name ?? '')
+        return sign * (a.last_name ?? '').localeCompare(b.last_name ?? '')
       case 'vehicle':
-        return (a.year ?? '').localeCompare(b.year ?? '')
+        return sign * (a.year ?? '').localeCompare(b.year ?? '')
       case 'distance':
-        return (b.distance_miles ?? 0) - (a.distance_miles ?? 0)
+        return sign * ((a.distance_miles ?? 0) - (b.distance_miles ?? 0))
       case 'received':
         return (
-          (b.bumped_at ?? '').localeCompare(a.bumped_at ?? '') ||
-          (b.received_date ?? '').localeCompare(a.received_date ?? '')
+          sign * (a.bumped_at ?? '').localeCompare(b.bumped_at ?? '') ||
+          sign * (a.received_date ?? '').localeCompare(b.received_date ?? '')
         )
       default:
         return (
@@ -237,7 +247,7 @@ function rankAndPage(
   const kept = matches.filter((m) => opts.cats.includes(m.lead.status))
   const scores = new Map(kept.map((m) => [m.lead.id, m.score]))
   const rank = categoryRank(opts.view)
-  const within = compareInCategory(opts.sort, scores)
+  const within = compareInCategory(opts.sort, opts.dir, scores)
 
   const sorted = kept
     .map((m) => m.lead)
@@ -277,6 +287,7 @@ export async function searchSubmissions(opts: SearchOptions): Promise<SearchResu
       cur_status: opts.view,
       statuses: opts.cats,
       sort_key: opts.sort,
+      sort_dir: opts.dir,
       lim: SEARCH_PAGE_SIZE,
       off: (Math.max(1, opts.page) - 1) * SEARCH_PAGE_SIZE,
       incl_desc: opts.fields.desc,

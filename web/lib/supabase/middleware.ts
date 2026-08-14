@@ -59,7 +59,9 @@ export async function updateSession(request: NextRequest) {
     effectivePath.startsWith('/login') ||
     effectivePath.startsWith('/auth') ||
     effectivePath.startsWith('/submit') ||
-    effectivePath.startsWith('/confirm')
+    effectivePath.startsWith('/confirm') ||
+    effectivePath === '/manifest.webmanifest' ||
+    effectivePath === '/sw.js'
 
   if (!user && !isPublic) {
     if (hasAuthCookie(request) && isTransientAuthFailure(error)) {

@@ -23,7 +23,7 @@ import type { Submission, DetailsMap, EmailsMap, SubmissionStatus } from '@/lib/
 import { NoteBody } from './NoteBody'
 import { WhatsNew } from './WhatsNew'
 import { STATUS_VIEWS } from '@/lib/types'
-import type { SortKey } from '@/lib/data'
+import { defaultSortDir, type SortKey, type SortDir } from '@/lib/sort'
 import {
   SEARCH_CATEGORIES,
   TEXT_FIELDS,
@@ -42,25 +42,32 @@ import { MobileLeadRow, MobileLeadSheet } from './MobileLeads'
 import { LeadEditDialog, type EditSection } from './LeadEditDialog'
 import { PipelineNav, FwButton, FwDialog } from './primitives'
 
-const SORT_FIELDS: { k: SortKey; label: string; phrase: string }[] = [
-  { k: 'received', label: 'Received', phrase: 'Newest first' },
-  { k: 'name', label: 'Customer name', phrase: 'Last name, A → Z' },
-  { k: 'vehicle', label: 'Vehicle year', phrase: 'Oldest → newest' },
-  { k: 'distance', label: 'Distance', phrase: 'Farthest first' },
+const SORT_FIELDS: { k: SortKey; label: string; ascPhrase: string; descPhrase: string }[] = [
+  { k: 'received', label: 'Received', ascPhrase: 'Oldest first', descPhrase: 'Newest first' },
+  { k: 'name', label: 'Customer name', ascPhrase: 'Last name, A → Z', descPhrase: 'Last name, Z → A' },
+  { k: 'vehicle', label: 'Vehicle year', ascPhrase: 'Oldest → newest', descPhrase: 'Newest → oldest' },
+  { k: 'distance', label: 'Distance', ascPhrase: 'Nearest first', descPhrase: 'Farthest first' },
 ]
 type SortField = (typeof SORT_FIELDS)[number]
 
 const RELEVANCE_FIELD: SortField = {
   k: 'relevance',
   label: 'Relevance',
-  phrase: 'Closest match first',
+  ascPhrase: 'Closest match first',
+  descPhrase: 'Closest match first',
+}
+
+function phraseFor(f: SortField, dir: SortDir): string {
+  return dir === 'asc' ? f.ascPhrase : f.descPhrase
 }
 
 function sortFieldsFor(view: SubmissionStatus, searching: boolean): SortField[] {
   const base =
     view === 'archived' && !searching
       ? SORT_FIELDS.map((f) =>
-          f.k === 'received' ? { ...f, label: 'Archived', phrase: 'Recently archived first' } : f,
+          f.k === 'received'
+            ? { ...f, label: 'Archived', ascPhrase: 'Oldest archived first', descPhrase: 'Recently archived first' }
+            : f,
         )
       : SORT_FIELDS
   return searching ? [RELEVANCE_FIELD, ...base] : base
@@ -73,6 +80,7 @@ const CATEGORY_LABEL: Record<string, string> = Object.fromEntries(
 function buildUrl(opts: {
   view: string
   sort?: SortKey
+  dir?: SortDir
   q?: string
   p?: number
   cats?: SubmissionStatus[]
@@ -81,7 +89,11 @@ function buildUrl(opts: {
   const params = new URLSearchParams()
   params.set('view', opts.view)
   const q = opts.q?.trim()
-  if (opts.sort && opts.sort !== (q ? 'relevance' : 'received')) params.set('sort', opts.sort)
+  const sortKey = opts.sort && opts.sort !== (q ? 'relevance' : 'received') ? opts.sort : undefined
+  if (sortKey) params.set('sort', sortKey)
+  if (opts.dir && opts.dir !== defaultSortDir(sortKey ?? (q ? 'relevance' : 'received'), opts.view as SubmissionStatus)) {
+    params.set('dir', opts.dir)
+  }
   if (q) params.set('q', q)
   if (q && opts.cats) {
     const cats = serializeCategories(opts.cats)
@@ -204,9 +216,39 @@ function Pager({
   )
 }
 
-/* ── Filters popover — pick the sort field (direction is server-defined) ── */
+function DirPill({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-pressed={active}
+      style={{
+        flex: 1,
+        cursor: 'pointer',
+        padding: '5px 7px',
+        borderRadius: 'var(--radius-sm)',
+        textAlign: 'left',
+        fontSize: 10.5,
+        lineHeight: 1.3,
+        border: `1px solid ${active ? 'var(--accent)' : 'var(--border-hairline)'}`,
+        background: active ? 'var(--accent-tint)' : 'transparent',
+        color: active ? 'var(--ink)' : 'var(--faint)',
+      }}
+      onMouseEnter={(e) => {
+        if (!active) e.currentTarget.style.background = 'var(--paper-sunk)'
+      }}
+      onMouseLeave={(e) => {
+        if (!active) e.currentTarget.style.background = 'transparent'
+      }}
+    >
+      {label}
+    </button>
+  )
+}
+
+/* ── Filters popover — pick the sort field and its direction ── */
 function FiltersPopover({
   sort,
+  dir,
   sortFields,
   searching,
   cats,
@@ -218,12 +260,13 @@ function FiltersPopover({
   onClose,
 }: {
   sort: SortKey
+  dir: SortDir
   sortFields: SortField[]
   searching: boolean
   cats: SubmissionStatus[]
   fields: SearchFields
   counts: Record<string, number>
-  onPick: (k: SortKey) => void
+  onPick: (k: SortKey, d: SortDir) => void
   onToggleCat: (k: SubmissionStatus) => void
   onToggleField: (k: TextField) => void
   onClose: () => void
@@ -251,42 +294,74 @@ function FiltersPopover({
         <div className="fw-label" style={{ marginBottom: 9 }}>
           Sort by
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
           {sortFields.map((f) => {
             const on = sort === f.k
+            if (f.k === 'relevance') {
+              return (
+                <button
+                  key={f.k}
+                  onClick={() => {
+                    onPick(f.k, 'desc')
+                    onClose()
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    width: '100%',
+                    cursor: 'pointer',
+                    padding: '7px 9px',
+                    borderRadius: 'var(--radius-sm)',
+                    textAlign: 'left',
+                    border: `1px solid ${on ? 'var(--accent)' : 'transparent'}`,
+                    background: on ? 'var(--accent-tint)' : 'transparent',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!on) e.currentTarget.style.background = 'var(--paper-sunk)'
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!on) e.currentTarget.style.background = 'transparent'
+                  }}
+                >
+                  <span style={{ color: on ? 'var(--accent)' : 'transparent', display: 'flex' }}>
+                    <Check size={14} />
+                  </span>
+                  <span style={{ flex: 1 }}>
+                    <span
+                      style={{
+                        display: 'block',
+                        fontFamily: 'var(--font-display)',
+                        fontSize: 12,
+                        fontWeight: 600,
+                        letterSpacing: '.05em',
+                        textTransform: 'uppercase',
+                        color: on ? 'var(--ink)' : 'var(--muted)',
+                      }}
+                    >
+                      {f.label}
+                    </span>
+                    <span style={{ display: 'block', fontSize: 11, color: 'var(--faint)' }}>{f.ascPhrase}</span>
+                  </span>
+                </button>
+              )
+            }
             return (
-              <button
-                key={f.k}
-                onClick={() => {
-                  onPick(f.k)
-                  onClose()
-                }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  width: '100%',
-                  cursor: 'pointer',
-                  padding: '7px 9px',
-                  borderRadius: 'var(--radius-sm)',
-                  textAlign: 'left',
-                  border: `1px solid ${on ? 'var(--accent)' : 'transparent'}`,
-                  background: on ? 'var(--accent-tint)' : 'transparent',
-                }}
-                onMouseEnter={(e) => {
-                  if (!on) e.currentTarget.style.background = 'var(--paper-sunk)'
-                }}
-                onMouseLeave={(e) => {
-                  if (!on) e.currentTarget.style.background = 'transparent'
-                }}
-              >
-                <span style={{ color: on ? 'var(--accent)' : 'transparent', display: 'flex' }}>
-                  <Check size={14} />
-                </span>
-                <span style={{ flex: 1 }}>
+              <div key={f.k}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '0 9px',
+                    marginBottom: 4,
+                  }}
+                >
+                  <span style={{ color: on ? 'var(--accent)' : 'transparent', display: 'flex' }}>
+                    <Check size={12} />
+                  </span>
                   <span
                     style={{
-                      display: 'block',
                       fontFamily: 'var(--font-display)',
                       fontSize: 12,
                       fontWeight: 600,
@@ -297,9 +372,26 @@ function FiltersPopover({
                   >
                     {f.label}
                   </span>
-                  <span style={{ display: 'block', fontSize: 11, color: 'var(--faint)' }}>{f.phrase}</span>
-                </span>
-              </button>
+                </div>
+                <div style={{ display: 'flex', gap: 4, padding: '0 9px' }}>
+                  <DirPill
+                    label={f.ascPhrase}
+                    active={on && dir === 'asc'}
+                    onClick={() => {
+                      onPick(f.k, 'asc')
+                      onClose()
+                    }}
+                  />
+                  <DirPill
+                    label={f.descPhrase}
+                    active={on && dir === 'desc'}
+                    onClick={() => {
+                      onPick(f.k, 'desc')
+                      onClose()
+                    }}
+                  />
+                </div>
+              </div>
             )
           })}
         </div>
@@ -529,6 +621,7 @@ export function CallConsole({
   counts,
   view,
   sort,
+  dir,
   search,
   searching,
   cats,
@@ -547,6 +640,7 @@ export function CallConsole({
   counts: Record<string, number>
   view: SubmissionStatus
   sort: SortKey
+  dir: SortDir
   search: string
   searching: boolean
   cats: SubmissionStatus[]
@@ -598,7 +692,14 @@ export function CallConsole({
       if (draft === (search ?? '')) return
       const willSearch = searchTokens(draft).length > 0
       router.replace(
-        buildUrl({ view, sort: willSearch === searching ? sort : undefined, q: draft, cats, fields }),
+        buildUrl({
+          view,
+          sort: willSearch === searching ? sort : undefined,
+          dir: willSearch === searching ? dir : undefined,
+          q: draft,
+          cats,
+          fields,
+        }),
       )
     }, 350)
     return () => clearTimeout(h)
@@ -653,11 +754,11 @@ export function CallConsole({
   function toggleCat(k: SubmissionStatus) {
     const next = cats.includes(k) ? cats.filter((c) => c !== k) : [...cats, k]
     if (!next.length) return
-    nav(buildUrl({ view, sort, q: search, cats: next, fields }))
+    nav(buildUrl({ view, sort, dir, q: search, cats: next, fields }))
   }
 
   function toggleField(k: TextField) {
-    nav(buildUrl({ view, sort, q: search, cats, fields: { ...fields, [k]: !fields[k] } }))
+    nav(buildUrl({ view, sort, dir, q: search, cats, fields: { ...fields, [k]: !fields[k] } }))
   }
 
   function onAction(lead: Submission, k: LeadActionKey) {
@@ -892,7 +993,22 @@ export function CallConsole({
           >
             <PipelineNav
               active={view}
-              onChange={(k) => nav(buildUrl({ view: k, sort: searching ? undefined : sort, q: '', cats, fields }))}
+              onChange={(k) => {
+                // Only carry the sort direction to the new tab if it was an
+                // explicit override on this tab — otherwise let the new tab
+                // fall back to its own default (e.g. Call Log's oldest-first).
+                const dirIsExplicit = !searching && dir !== defaultSortDir(sort, view)
+                nav(
+                  buildUrl({
+                    view: k,
+                    sort: searching ? undefined : sort,
+                    dir: dirIsExplicit ? dir : undefined,
+                    q: '',
+                    cats,
+                    fields,
+                  }),
+                )
+              }}
               tabs={tabs}
             />
           </div>
@@ -955,7 +1071,7 @@ export function CallConsole({
               <FwButton
                 variant="secondary"
                 icon={<SlidersHorizontal size={14} />}
-                iconRight={<ArrowDown size={12} />}
+                iconRight={<ArrowDown size={12} style={{ transform: dir === 'asc' ? 'rotate(180deg)' : undefined }} />}
                 active={filtersOpen}
                 onClick={() => setFiltersOpen((o) => !o)}
               >
@@ -964,12 +1080,13 @@ export function CallConsole({
               {filtersOpen && (
                 <FiltersPopover
                   sort={sort}
+                  dir={dir}
                   sortFields={sortFields}
                   searching={searching}
                   cats={cats}
                   fields={fields}
                   counts={counts}
-                  onPick={(k) => nav(buildUrl({ view, sort: k, q: search, cats, fields }))}
+                  onPick={(k, d) => nav(buildUrl({ view, sort: k, dir: d, q: search, cats, fields }))}
                   onToggleCat={toggleCat}
                   onToggleField={toggleField}
                   onClose={() => setFiltersOpen(false)}
@@ -999,7 +1116,7 @@ export function CallConsole({
               </span>
               {hiddenCount > 0 && (
                 <button
-                  onClick={() => nav(buildUrl({ view, sort, q: search, cats: SEARCH_CATEGORIES, fields }))}
+                  onClick={() => nav(buildUrl({ view, sort, dir, q: search, cats: SEARCH_CATEGORIES, fields }))}
                   className="tnum"
                   style={{
                     border: '1px solid var(--border-strong)',
@@ -1021,8 +1138,8 @@ export function CallConsole({
                 Sorted by
               </span>
               <span style={{ color: 'var(--muted)' }}>{sortMeta.label}</span>
-              <span style={{ color: 'var(--accent)' }}>▼</span>
-              <span style={{ color: 'var(--faint)' }}>{sortMeta.phrase}</span>
+              <span style={{ color: 'var(--accent)' }}>{dir === 'asc' ? '▲' : '▼'}</span>
+              <span style={{ color: 'var(--faint)' }}>{phraseFor(sortMeta, dir)}</span>
             </div>
           </div>
           {density === 'comfortable' && rows.length > 0 && (
@@ -1123,8 +1240,8 @@ export function CallConsole({
           <Pager
             page={page}
             pageCount={pageCount}
-            onGo={(p) => nav(buildUrl({ view, sort, q: search, cats, fields, p }))}
-            hrefFor={(p) => buildUrl({ view, sort, q: search, cats, fields, p })}
+            onGo={(p) => nav(buildUrl({ view, sort, dir, q: search, cats, fields, p }))}
+            hrefFor={(p) => buildUrl({ view, sort, dir, q: search, cats, fields, p })}
           />
         )}
       </main>

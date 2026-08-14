@@ -1,31 +1,31 @@
 'use client'
 import * as React from 'react'
-import { Mail, StickyNote, Pencil, Undo } from 'lucide-react'
+import { SearchX, ArrowUpDown, Smartphone } from 'lucide-react'
 import { FwButton, FwDialog } from './primitives'
 
 const STORAGE_KEY = 'fw_whats_new_seen'
-const VERSION = '2026-08-emails-notes'
+const VERSION = '2026-08-sort-pwa'
 
 const ITEMS = [
   {
-    icon: <Mail size={15} />,
-    title: 'Sent emails show on the lead',
-    body: 'Every email sent from the composer now appears on the lead itself, with the date, subject and full message. Click one to expand or collapse it. Past sends are included, so emails from before this change are already there.',
+    icon: <SearchX size={15} />,
+    title: 'Search clears when you switch tabs',
+    body: 'Jumping from Call Log to Pending (or any other tab) while a search is active now clears the search box, instead of carrying that search — and its result ordering — into the new tab.',
   },
   {
-    icon: <StickyNote size={15} />,
-    title: 'Notes are dated',
-    body: 'A note you write from now on is stamped with the date and shows as Today, Yesterday, or the date it was written. Notes added before this change have no date — there was no record of when they were written.',
+    icon: <ArrowUpDown size={15} />,
+    title: 'Call Log now starts oldest-first',
+    body: 'The Call Log tab defaults to the oldest received leads first, so nothing new sits unworked at the bottom. Every other tab still opens newest-first, as before.',
   },
   {
-    icon: <Pencil size={15} />,
-    title: 'Notes can be edited',
-    body: 'Turn on Edit, then click the Notes block on a lead. Each note gets its own box to reword, and an ✕ to delete it. Editing a note keeps its original date.',
+    icon: <ArrowUpDown size={15} />,
+    title: 'Every sort now has a direction',
+    body: 'Open Filters and each sort — Received, Customer name, Vehicle year, Distance — now offers both directions: oldest/newest, A→Z/Z→A, nearest/farthest. Pick whichever fits what you’re working on.',
   },
   {
-    icon: <Undo size={15} />,
-    title: 'A logged call can be removed',
-    body: 'In Edit mode, Call 1, 2 and 3 become clickable. Hover one and it offers to remove it — for when a call gets logged by mistake.',
+    icon: <Smartphone size={15} />,
+    title: 'Installable as an app',
+    body: 'The Call Log can now be installed to your phone or desktop like a native app — look for "Install" or "Add to Home Screen" in the browser menu. It opens in its own window, no address bar.',
   },
 ]
 

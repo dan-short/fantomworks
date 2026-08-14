@@ -1,6 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Oswald, Inter, JetBrains_Mono } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { PwaRegister } from "@/components/fw/PwaRegister";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -33,6 +34,15 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "FantomWorks Call Log",
   description: "FantomWorks project submission call log",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Call Log",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#c1352b",
 };
 
 export default function RootLayout({
@@ -46,6 +56,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${oswald.variable} ${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        <PwaRegister />
         <TooltipProvider delayDuration={200}>{children}</TooltipProvider>
       </body>
     </html>

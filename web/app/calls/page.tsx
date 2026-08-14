@@ -4,9 +4,11 @@ import {
   getEmailsFor,
   countByStatus,
   searchSubmissions,
+  defaultSortDir,
   PAGE_SIZE,
   SEARCH_PAGE_SIZE,
   type SortKey,
+  type SortDir,
 } from '@/lib/data'
 import { parseCategories, parseFields, searchTokens } from '@/lib/search'
 import { isStatus, type SubmissionStatus } from '@/lib/types'
@@ -15,6 +17,7 @@ import { createClient } from '@/lib/supabase/server'
 import { CallConsole } from '@/components/fw/CallConsole'
 
 const SORT_KEYS: SortKey[] = ['relevance', 'received', 'name', 'vehicle', 'distance']
+const SORT_DIRS: SortDir[] = ['asc', 'desc']
 
 export default async function CallsPage({
   searchParams,
@@ -22,6 +25,7 @@ export default async function CallsPage({
   searchParams: Promise<{
     view?: string
     sort?: string
+    dir?: string
     q?: string
     p?: string
     cats?: string
@@ -39,15 +43,19 @@ export default async function CallsPage({
   const requested = SORT_KEYS.includes(sp.sort as SortKey) ? (sp.sort as SortKey) : undefined
   const sort: SortKey = requested ?? (searching ? 'relevance' : 'received')
 
+  const requestedDir = SORT_DIRS.includes(sp.dir as SortDir) ? (sp.dir as SortDir) : undefined
+  const dir: SortDir = requestedDir ?? defaultSortDir(sort, view)
+
   let rows, total, counts
   if (searching) {
-    const result = await searchSubmissions({ q: search, view, cats, fields, sort, page })
+    const result = await searchSubmissions({ q: search, view, cats, fields, sort, dir, page })
     rows = result.rows
     total = result.total
     counts = result.counts
   } else {
+    const effectiveSort = sort === 'relevance' ? 'received' : sort
     const [pageResult, statusCounts] = await Promise.all([
-      getSubmissions(view, { sort: sort === 'relevance' ? 'received' : sort, page }),
+      getSubmissions(view, { sort: effectiveSort, dir: sort === 'relevance' ? defaultSortDir(effectiveSort, view) : dir, page }),
       countByStatus(),
     ])
     rows = pageResult.rows
@@ -80,6 +88,7 @@ export default async function CallsPage({
       counts={counts}
       view={view}
       sort={sort}
+      dir={dir}
       search={search}
       searching={searching}
       cats={cats}
