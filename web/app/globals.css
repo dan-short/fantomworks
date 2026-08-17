@@ -225,7 +225,7 @@ body {
   background-size: var(--grid-size) var(--grid-size);
 }
 
-.fw.night {
+:root[data-fw-theme='night'] .fw {
   --paper: #17191c;
   --paper-sunk: #131518;
   --surface: #212428;
@@ -248,6 +248,16 @@ body {
   --steel-ink: #e8ebee;
 
   --grid-line: rgba(160, 170, 185, 0.04);
+}
+
+.fw .fw-night-only {
+  display: none;
+}
+:root[data-fw-theme='night'] .fw .fw-night-only {
+  display: block;
+}
+:root[data-fw-theme='night'] .fw .fw-day-only {
+  display: none;
 }
 
 .fw .fw-label {

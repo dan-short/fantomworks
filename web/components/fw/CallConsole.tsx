@@ -18,10 +18,13 @@ import {
   ArrowDown,
   Check,
   MailPlus,
+  History,
 } from 'lucide-react'
 import type { Submission, DetailsMap, EmailsMap, SubmissionStatus } from '@/lib/types'
 import { NoteBody } from './NoteBody'
 import { WhatsNew } from './WhatsNew'
+import { PatchNotes } from './PatchNotes'
+import { applyTheme, currentTheme, setThemeAttr, storedTheme } from '@/lib/theme'
 import { STATUS_VIEWS } from '@/lib/types'
 import { defaultSortDir, type SortKey, type SortDir } from '@/lib/sort'
 import {
@@ -663,7 +666,7 @@ export function CallConsole({
   )
 
   const [filtersOpen, setFiltersOpen] = React.useState(false)
-  const [night, setNight] = React.useState(false)
+  const [patchNotes, setPatchNotes] = React.useState(false)
   const [density, setDensity] = React.useState<'comfortable' | 'compact'>('comfortable')
   const [sel, setSel] = React.useState<Set<number>>(() => new Set())
   const [noteFor, setNoteFor] = React.useState<Submission | null>(null)
@@ -676,10 +679,15 @@ export function CallConsole({
   const sheetLead = sheetId == null ? null : (rows.find((r) => r.id === sheetId) ?? null)
 
   React.useEffect(() => {
+    if (storedTheme()) return
     if (window.matchMedia('(max-width: 700px)').matches && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      setNight(true)
+      setThemeAttr('night')
     }
   }, [])
+
+  function toggleNight() {
+    applyTheme(currentTheme() === 'night' ? 'day' : 'night')
+  }
 
   const [qInput, setQInput] = React.useState(search)
   const [prevView, setPrevView] = React.useState(view)
@@ -824,7 +832,7 @@ export function CallConsole({
   const steelToggleBorder = '1px solid rgba(255,255,255,.2)'
 
   return (
-    <div className={`fw${night ? ' night' : ''}`} style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
+    <div className="fw" style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
       {devMode && (
         <div
           style={{
@@ -944,7 +952,26 @@ export function CallConsole({
               <MailPlus size={15} />
             </button>
             <button
-              onClick={() => setNight((n) => !n)}
+              className="fw-desktop-only"
+              onClick={() => setPatchNotes(true)}
+              title="Patch notes"
+              aria-label="Patch notes"
+              style={{
+                border: steelToggleBorder,
+                background: 'rgba(255,255,255,.06)',
+                color: '#fff',
+                cursor: 'pointer',
+                width: 32,
+                height: 32,
+                borderRadius: 'var(--radius-sm)',
+                display: 'grid',
+                placeItems: 'center',
+              }}
+            >
+              <History size={15} />
+            </button>
+            <button
+              onClick={toggleNight}
               title="Night shift"
               aria-label="Toggle night shift"
               style={{
@@ -959,7 +986,8 @@ export function CallConsole({
                 placeItems: 'center',
               }}
             >
-              {night ? <Sun size={15} /> : <Moon size={15} />}
+              <Moon size={15} className="fw-day-only" />
+              <Sun size={15} className="fw-night-only" />
             </button>
             <form action={signOut} onSubmit={() => clearSavedLogin()}>
               <button
@@ -1265,7 +1293,9 @@ export function CallConsole({
         />
       )}
 
-      <WhatsNew />
+      <WhatsNew onSeeAll={() => setPatchNotes(true)} />
+
+      <PatchNotes open={patchNotes} onClose={() => setPatchNotes(false)} />
 
       {editing && (
         <LeadEditDialog
