@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+
+# name:one-line description — single source of truth for both the menu and completion
+COMMANDS=(
+  "dev:Run the Next.js dev server (web/ — the only app in this repo)"
+  "build:Production build of web/"
+  "lint:Lint web/"
+  "shell:Print the ~/.zshrc snippet for the fantomworks function + completion"
+  "help:List commands"
+)
+
+cmd_dev() {
+  (cd "$ROOT/web" && bun run dev)
+}
+
+cmd_build() {
+  (cd "$ROOT/web" && bun run build)
+}
+
+cmd_lint() {
+  (cd "$ROOT/web" && bun run lint)
+}
+
+cmd_help() {
+  echo "usage: fantomworks <command>"
+  echo
+  for entry in "${COMMANDS[@]}"; do
+    printf "  %-9s %s\n" "${entry%%:*}" "${entry#*:}"
+  done
+}
+
+cmd_shell() {
+  cat <<'EOF'
+fantomworks() { "$HOME/Projects/fantomworks/scripts/fantomworks" "$@"; }
+
+_fantomworks_complete() {
+  local -a subcmds
+  subcmds=("${(@f)$(fantomworks --complete)}")
+  _describe 'command' subcmds
+}
+compdef _fantomworks_complete fantomworks
+EOF
+}
+
+cmd___complete() {
+  for entry in "${COMMANDS[@]}"; do
+    echo "$entry"
+  done
+}
+
+# Same table drives an fzf picker on bare invocation — only when it'd actually be
+# interactive, so a cron job or `fantomworks build | something` never gets asked anything.
+interactive_pick() {
+  local lines
+  lines="$(for entry in "${COMMANDS[@]}"; do
+    printf "%-9s %s\n" "${entry%%:*}" "${entry#*:}"
+  done)"
+  echo "$lines" | fzf --prompt='fantomworks> ' --height='~70%' --reverse --no-info \
+    --header='select a command' | awk '{print $1}'
+}
+
+if [[ $# -eq 0 && -t 0 && -t 1 ]] && command -v fzf >/dev/null 2>&1; then
+  picked="$(interactive_pick || true)"
+  [[ -n "$picked" ]] || exit 0
+  set -- "$picked"
+fi
+
+case "${1:-help}" in
+  dev) cmd_dev ;;
+  build) cmd_build ;;
+  lint) cmd_lint ;;
+  shell) cmd_shell ;;
+  --complete) cmd___complete ;;
+  help|*) cmd_help ;;
+esac
