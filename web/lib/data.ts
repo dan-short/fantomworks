@@ -6,7 +6,7 @@ import { createClient } from './supabase/server'
 import { seedSubmissions, seedDetails } from './seed'
 import { PHOTO_BUCKET, resolvePhotoUrl, storageKey } from './images'
 import { SEARCH_CATEGORIES, searchCollection, searchTokens, type SearchFields } from './search'
-import type { Submission, DetailStage, DetailsMap, EmailsMap, SentEmail, SubmissionStatus } from './types'
+import type { Submission, DetailStage, DetailsMap, EmailsMap, Favorite, SentEmail, SubmissionStatus } from './types'
 import { defaultSortDir, type SortKey, type SortDir } from './sort'
 
 const SIGNED_URL_TTL = 60 * 60
@@ -40,6 +40,7 @@ async function attachImageUrls(rows: Submission[]): Promise<void> {
 const g = globalThis as unknown as {
   __fw_subs?: Submission[]
   __fw_details?: DetailsMap
+  __fw_favs?: Map<number, string>
 }
 
 function loadDev() {
@@ -65,6 +66,9 @@ function devSubs(): Submission[] {
 function devDetails(): DetailsMap {
   loadDev()
   return g.__fw_details!
+}
+function devFavs(): Map<number, string> {
+  return (g.__fw_favs ??= new Map())
 }
 
 function fromRow(row: Record<string, unknown>): Submission {
@@ -343,6 +347,56 @@ export async function countByStatus(): Promise<Record<string, number>> {
   return counts
 }
 
+export async function getFavorites(): Promise<Favorite[]> {
+  if (isSupabaseConfigured) {
+    const supabase = await createClient()
+    const { data, error } = await supabase
+      .from('submission_favorites')
+      .select('submission_id, saved_at, submissions!inner(status)')
+      .neq('submissions.status', 'deleted')
+      .order('saved_at', { ascending: false })
+    if (error) return []
+    const rows = (data ?? []) as unknown as {
+      submission_id: number
+      saved_at: string
+      submissions: { status: SubmissionStatus }
+    }[]
+    return rows.map((r) => ({ id: r.submission_id, status: r.submissions.status, saved_at: r.saved_at }))
+  }
+  const byId = new Map(devSubs().map((s) => [s.id, s.status]))
+  const out: Favorite[] = []
+  for (const [id, saved_at] of devFavs()) {
+    const status = byId.get(id)
+    if (status && status !== 'deleted') out.push({ id, status, saved_at })
+  }
+  return out.sort((a, b) => b.saved_at.localeCompare(a.saved_at))
+}
+
+export async function getSavedSubmissions(favorites: Favorite[], page: number): Promise<SubmissionsPage> {
+  const rank = new Map(SEARCH_CATEGORIES.map((c, i) => [c, i]))
+  const ordered = [...favorites].sort(
+    (a, b) => (rank.get(a.status) ?? 99) - (rank.get(b.status) ?? 99) || b.saved_at.localeCompare(a.saved_at),
+  )
+  const from = (Math.max(1, page) - 1) * PAGE_SIZE
+  const ids = ordered.slice(from, from + PAGE_SIZE).map((f) => f.id)
+  if (!ids.length) return { rows: [], total: ordered.length }
+
+  let rows: Submission[]
+  if (isSupabaseConfigured) {
+    const supabase = await createClient()
+    const { data, error } = await supabase.from('submissions').select(SELECT_COLS).in('id', ids)
+    if (error) throw error
+    rows = ((data ?? []) as unknown as Record<string, unknown>[]).map(fromRow)
+    await attachImageUrls(rows)
+  } else {
+    const wanted = new Set(ids)
+    rows = devSubs().filter((s) => wanted.has(s.id))
+  }
+  const position = new Map(ids.map((id, i) => [id, i]))
+  rows.sort((a, b) => (position.get(a.id) ?? 0) - (position.get(b.id) ?? 0))
+  return { rows, total: ordered.length }
+}
+
 export async function getSubmission(id: number): Promise<Submission | null> {
   if (isSupabaseConfigured) {
     const supabase = await createClient()
@@ -437,6 +491,11 @@ export const devStore = {
   update(id: number, patch: Partial<Submission>) {
     const row = devSubs().find((s) => s.id === id)
     if (row) Object.assign(row, patch)
+  },
+  setFavorite(id: number, on: boolean) {
+    const favs = devFavs()
+    if (!on) favs.delete(id)
+    else if (!favs.has(id)) favs.set(id, new Date().toISOString())
   },
   setStages(id: number, stages: DetailStage[]) {
     const all = devDetails()

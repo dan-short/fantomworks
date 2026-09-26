@@ -4,6 +4,8 @@ import {
   getEmailsFor,
   countByStatus,
   searchSubmissions,
+  getFavorites,
+  getSavedSubmissions,
   defaultSortDir,
   PAGE_SIZE,
   SEARCH_PAGE_SIZE,
@@ -11,7 +13,7 @@ import {
   type SortDir,
 } from '@/lib/data'
 import { parseCategories, parseFields, searchTokens } from '@/lib/search'
-import { isStatus, type SubmissionStatus } from '@/lib/types'
+import { isStatus, type ConsoleView, type SubmissionStatus } from '@/lib/types'
 import { isSupabaseConfigured } from '@/lib/supabase/config'
 import { createClient } from '@/lib/supabase/server'
 import { CallConsole } from '@/components/fw/CallConsole'
@@ -33,7 +35,9 @@ export default async function CallsPage({
   }>
 }) {
   const sp = await searchParams
-  const view: SubmissionStatus = sp.view && isStatus(sp.view) ? sp.view : 'new'
+  const saved = sp.view === 'saved'
+  const view: SubmissionStatus = !saved && sp.view && isStatus(sp.view) ? sp.view : 'new'
+  const consoleView: ConsoleView = saved ? 'saved' : view
   const search = (sp.q ?? '').trim()
   const searching = searchTokens(search).length > 0
   const cats = parseCategories(sp.cats)
@@ -44,14 +48,21 @@ export default async function CallsPage({
   const sort: SortKey = requested ?? (searching ? 'relevance' : 'received')
 
   const requestedDir = SORT_DIRS.includes(sp.dir as SortDir) ? (sp.dir as SortDir) : undefined
-  const dir: SortDir = requestedDir ?? defaultSortDir(sort, view)
+  const dir: SortDir = requestedDir ?? defaultSortDir(sort, consoleView)
 
+  const favoritesPromise = getFavorites()
   let rows, total, counts
   if (searching) {
     const result = await searchSubmissions({ q: search, view, cats, fields, sort, dir, page })
     rows = result.rows
     total = result.total
     counts = result.counts
+  } else if (saved) {
+    const [favs, statusCounts] = await Promise.all([favoritesPromise, countByStatus()])
+    const savedPage = await getSavedSubmissions(favs, page)
+    rows = savedPage.rows
+    total = savedPage.total
+    counts = statusCounts
   } else {
     const effectiveSort = sort === 'relevance' ? 'received' : sort
     const [pageResult, statusCounts] = await Promise.all([
@@ -64,7 +75,7 @@ export default async function CallsPage({
   }
 
   const ids = rows.map((s) => s.id)
-  const [details, emails] = await Promise.all([getDetailStagesFor(ids), getEmailsFor(ids)])
+  const [details, emails, favorites] = await Promise.all([getDetailStagesFor(ids), getEmailsFor(ids), favoritesPromise])
 
   const size = searching ? SEARCH_PAGE_SIZE : PAGE_SIZE
   const pageCount = Math.max(1, Math.ceil(total / size))
@@ -86,7 +97,8 @@ export default async function CallsPage({
       details={details}
       emails={emails}
       counts={counts}
-      view={view}
+      favorites={favorites}
+      view={consoleView}
       sort={sort}
       dir={dir}
       search={search}

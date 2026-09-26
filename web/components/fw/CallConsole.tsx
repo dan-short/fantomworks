@@ -19,8 +19,9 @@ import {
   Check,
   MailPlus,
   History,
+  Bookmark,
 } from 'lucide-react'
-import type { Submission, DetailsMap, EmailsMap, SubmissionStatus } from '@/lib/types'
+import type { ConsoleView, Submission, DetailsMap, EmailsMap, Favorite, SubmissionStatus } from '@/lib/types'
 import { NoteBody } from './NoteBody'
 import { WhatsNew } from './WhatsNew'
 import { PatchNotes } from './PatchNotes'
@@ -38,6 +39,7 @@ import {
 } from '@/lib/search'
 import { resolvePhotoUrl } from '@/lib/images'
 import { logCallAttempt, clearCallAttempt, setStatus, addNote, bump } from '@/app/actions/submissions'
+import { setFavorite } from '@/app/actions/favorites'
 import { signOut } from '@/app/login/actions'
 import { clearSavedLogin } from '@/lib/saved-login'
 import { LeadCard, type LeadActionKey } from './LeadCard'
@@ -65,7 +67,7 @@ function phraseFor(f: SortField, dir: SortDir): string {
   return dir === 'asc' ? f.ascPhrase : f.descPhrase
 }
 
-function sortFieldsFor(view: SubmissionStatus, searching: boolean): SortField[] {
+function sortFieldsFor(view: ConsoleView, searching: boolean): SortField[] {
   const base =
     view === 'archived' && !searching
       ? SORT_FIELDS.map((f) =>
@@ -95,7 +97,7 @@ function buildUrl(opts: {
   const q = opts.q?.trim()
   const sortKey = opts.sort && opts.sort !== (q ? 'relevance' : 'received') ? opts.sort : undefined
   if (sortKey) params.set('sort', sortKey)
-  if (opts.dir && opts.dir !== defaultSortDir(sortKey ?? (q ? 'relevance' : 'received'), opts.view as SubmissionStatus)) {
+  if (opts.dir && opts.dir !== defaultSortDir(sortKey ?? (q ? 'relevance' : 'received'), opts.view as ConsoleView)) {
     params.set('dir', opts.dir)
   }
   if (q) params.set('q', q)
@@ -549,17 +551,69 @@ function FiltersPopover({
   )
 }
 
-function CategoryHeader({ status, shown, total }: { status: SubmissionStatus; shown: number; total: number }) {
+function CategoryHeader({
+  status,
+  shown,
+  total,
+  first,
+  size,
+}: {
+  status: SubmissionStatus
+  shown: number
+  total: number
+  first: boolean
+  size: 'lg' | 'md'
+}) {
+  const lg = size === 'lg'
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: 4 }}>
-      <span className="fw-label" style={{ color: 'var(--ink-2)', letterSpacing: '.14em' }}>
+    <h2
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: lg ? 12 : 10,
+        margin: 0,
+        paddingTop: first ? 2 : lg ? 18 : 14,
+        paddingBottom: 2,
+        font: 'inherit',
+      }}
+    >
+      <span
+        aria-hidden
+        style={{ width: lg ? 6 : 5, height: lg ? 28 : 22, flexShrink: 0, borderRadius: 2, background: `var(--status-${status}, var(--steel))` }}
+      />
+      <span
+        style={{
+          fontFamily: 'var(--font-display)',
+          fontSize: lg ? 28 : 22,
+          fontWeight: 700,
+          letterSpacing: '.04em',
+          textTransform: 'uppercase',
+          color: 'var(--ink)',
+          lineHeight: 1,
+          whiteSpace: 'nowrap',
+        }}
+      >
         {CATEGORY_LABEL[status] ?? status}
       </span>
-      <span className="tnum" style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--faint)', whiteSpace: 'nowrap' }}>
+      <span
+        className="tnum"
+        style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: lg ? 14 : 13,
+          fontWeight: 600,
+          lineHeight: 1.4,
+          padding: '2px 10px',
+          borderRadius: 'var(--radius-full)',
+          color: 'var(--ink-2)',
+          background: 'var(--paper-sunk)',
+          border: '1px solid var(--border-hairline)',
+          whiteSpace: 'nowrap',
+        }}
+      >
         {shown === total ? `${total}` : `${shown} of ${total}`}
       </span>
-      <span aria-hidden style={{ flex: 1, height: 1, background: 'var(--border-hairline)' }} />
-    </div>
+      <span aria-hidden style={{ flex: 1, height: 2, background: 'var(--border-hairline)' }} />
+    </h2>
   )
 }
 
@@ -623,6 +677,7 @@ export function CallConsole({
   details,
   emails,
   counts,
+  favorites,
   view,
   sort,
   dir,
@@ -642,7 +697,8 @@ export function CallConsole({
   details: DetailsMap
   emails: EmailsMap
   counts: Record<string, number>
-  view: SubmissionStatus
+  favorites: Favorite[]
+  view: ConsoleView
   sort: SortKey
   dir: SortDir
   search: string
@@ -677,6 +733,28 @@ export function CallConsole({
   const [editing, setEditing] = React.useState<{ lead: Submission; section: EditSection } | null>(null)
   const [sheetId, setSheetId] = React.useState<number | null>(null)
   const sheetLead = sheetId == null ? null : (rows.find((r) => r.id === sheetId) ?? null)
+
+  const serverSaved = React.useMemo(() => new Set(favorites.map((f) => f.id)), [favorites])
+  const [savedIds, flipSaved] = React.useOptimistic(serverSaved, (cur: Set<number>, id: number) => {
+    const next = new Set(cur)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    return next
+  })
+  const [, startSaving] = React.useTransition()
+  const savedCounts = React.useMemo(() => {
+    const out: Record<string, number> = {}
+    for (const f of favorites) out[f.status] = (out[f.status] ?? 0) + 1
+    return out
+  }, [favorites])
+
+  function toggleSaved(lead: Submission) {
+    const on = !savedIds.has(lead.id)
+    startSaving(async () => {
+      flipSaved(lead.id)
+      await setFavorite(lead.id, on).catch(() => undefined)
+    })
+  }
 
   React.useEffect(() => {
     if (storedTheme()) return
@@ -741,8 +819,14 @@ export function CallConsole({
     })
   }
 
-  const tabs = STATUS_VIEWS.map((v) => ({ key: v.key, label: v.label, count: counts[v.key] ?? 0 }))
-  const viewLabel = STATUS_VIEWS.find((v) => v.key === view)?.label ?? view
+  const tabs = [
+    { key: 'saved', label: 'Saved', count: savedIds.size, icon: <Bookmark size={13} fill={view === 'saved' ? 'currentColor' : 'none'} /> },
+    ...STATUS_VIEWS.map((v) => ({ key: v.key, label: v.label, count: counts[v.key] ?? 0 })),
+  ]
+  const viewLabel = view === 'saved' ? 'Saved' : (STATUS_VIEWS.find((v) => v.key === view)?.label ?? view)
+  const savedView = view === 'saved' && !searching
+  const grouped = searching || savedView
+  const groupTotal = (s: SubmissionStatus) => (searching ? counts[s] : savedCounts[s]) ?? 0
   const sortFields = sortFieldsFor(view, searching)
   const sortMeta = sortFields.find((f) => f.k === sort) ?? sortFields[0]
   const tokens = React.useMemo(() => (searching ? searchTokens(search) : []), [searching, search])
@@ -1027,11 +1111,12 @@ export function CallConsole({
                 // Only carry the sort direction to the new tab if it was an
                 // explicit override on this tab — otherwise let the new tab
                 // fall back to its own default (e.g. Call Log's oldest-first).
-                const dirIsExplicit = !searching && dir !== defaultSortDir(sort, view)
+                const toSaved = k === 'saved'
+                const dirIsExplicit = !searching && !toSaved && dir !== defaultSortDir(sort, view)
                 nav(
                   buildUrl({
                     view: k,
-                    sort: searching ? undefined : sort,
+                    sort: searching || toSaved ? undefined : sort,
                     dir: dirIsExplicit ? dir : undefined,
                     q: '',
                     cats,
@@ -1097,7 +1182,7 @@ export function CallConsole({
                 </button>
               ))}
             </div>
-            <div style={{ position: 'relative' }}>
+            <div style={{ position: 'relative', display: savedView ? 'none' : undefined }}>
               <FwButton
                 variant="secondary"
                 icon={<SlidersHorizontal size={14} />}
@@ -1137,6 +1222,10 @@ export function CallConsole({
                   <>
                     {total} {total === 1 ? 'match' : 'matches'} across all categories
                   </>
+                ) : savedView ? (
+                  <>
+                    {total} saved {total === 1 ? 'lead' : 'leads'}
+                  </>
                 ) : (
                   <>
                     {total} {total === 1 ? 'lead' : 'leads'}
@@ -1165,11 +1254,20 @@ export function CallConsole({
             </div>
             <div className="fw-hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--faint)' }}>
               <span className="fw-label" style={{ marginRight: 2 }}>
-                Sorted by
+                {savedView ? 'Grouped by' : 'Sorted by'}
               </span>
-              <span style={{ color: 'var(--muted)' }}>{sortMeta.label}</span>
-              <span style={{ color: 'var(--accent)' }}>{dir === 'asc' ? '▲' : '▼'}</span>
-              <span style={{ color: 'var(--faint)' }}>{phraseFor(sortMeta, dir)}</span>
+              {savedView ? (
+                <>
+                  <span style={{ color: 'var(--muted)' }}>Category</span>
+                  <span style={{ color: 'var(--faint)' }}>Newest saved first</span>
+                </>
+              ) : (
+                <>
+                  <span style={{ color: 'var(--muted)' }}>{sortMeta.label}</span>
+                  <span style={{ color: 'var(--accent)' }}>{dir === 'asc' ? '▲' : '▼'}</span>
+                  <span style={{ color: 'var(--faint)' }}>{phraseFor(sortMeta, dir)}</span>
+                </>
+              )}
             </div>
           </div>
           {density === 'comfortable' && rows.length > 0 && (
@@ -1191,10 +1289,10 @@ export function CallConsole({
         {rows.length > 0 ? (
           <>
             <div className="fw-desktop-only" style={{ display: 'flex', flexDirection: 'column', gap: density === 'compact' ? 7 : 12 }}>
-              {groups.map((g) => (
+              {groups.map((g, i) => (
                 <React.Fragment key={g.status}>
-                  {searching && (
-                    <CategoryHeader status={g.status} shown={g.rows.length} total={counts[g.status] ?? 0} />
+                  {grouped && (
+                    <CategoryHeader status={g.status} shown={g.rows.length} total={groupTotal(g.status)} first={i === 0} size="lg" />
                   )}
                   {g.rows.map((l) => (
                     <LeadCard
@@ -1204,10 +1302,12 @@ export function CallConsole({
                       emails={emails[l.id] ?? []}
                       compact={density === 'compact'}
                       selected={sel.has(l.id)}
+                      saved={savedIds.has(l.id)}
                       editMode={editMode}
                       tokens={tokens}
                       onEditSection={(lead, section) => setEditing({ lead, section })}
                       onToggleSelect={toggleSel}
+                      onToggleSaved={toggleSaved}
                       onAction={onAction}
                       onAddNote={(lead) => {
                         setNoteFor(lead)
@@ -1222,13 +1322,13 @@ export function CallConsole({
             </div>
             <div className="fw-mobile-only">
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {groups.map((g) => (
+                {groups.map((g, i) => (
                   <React.Fragment key={g.status}>
-                    {searching && (
-                      <CategoryHeader status={g.status} shown={g.rows.length} total={counts[g.status] ?? 0} />
+                    {grouped && (
+                      <CategoryHeader status={g.status} shown={g.rows.length} total={groupTotal(g.status)} first={i === 0} size="md" />
                     )}
                     {g.rows.map((l) => (
-                      <MobileLeadRow key={l.id} lead={l} onOpen={(lead) => setSheetId(lead.id)} />
+                      <MobileLeadRow key={l.id} lead={l} saved={savedIds.has(l.id)} onOpen={(lead) => setSheetId(lead.id)} />
                     ))}
                   </React.Fragment>
                 ))}
@@ -1248,9 +1348,9 @@ export function CallConsole({
               textAlign: 'center',
             }}
           >
-            <Wrench size={26} />
+            {savedView ? <Bookmark size={26} /> : <Wrench size={26} />}
             <p style={{ margin: '12px 0 2px', fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--muted)' }}>
-              {searching ? 'No matching leads' : search ? 'Keep typing' : `Nothing in ${viewLabel} yet`}
+              {searching ? 'No matching leads' : search ? 'Keep typing' : savedView ? 'Nothing saved yet' : `Nothing in ${viewLabel} yet`}
             </p>
             <p style={{ margin: 0, fontSize: 12.5 }}>
               {searching
@@ -1261,7 +1361,9 @@ export function CallConsole({
                     : 'Nothing matched in any category, even loosely. Try fewer or shorter words.'
                 : search
                   ? 'Search needs at least two letters.'
-                  : 'Triage a lead from the Call Log — move it here with the ⋮ actions menu.'}
+                  : savedView
+                    ? 'Tap the bookmark on any lead to keep it here. Saves belong to your login, so they follow you to every device.'
+                    : 'Triage a lead from the Call Log — move it here with the ⋮ actions menu.'}
             </p>
           </div>
         )}
@@ -1281,6 +1383,8 @@ export function CallConsole({
           lead={sheetLead}
           stages={details[sheetLead.id] ?? []}
           emails={emails[sheetLead.id] ?? []}
+          saved={savedIds.has(sheetLead.id)}
+          onToggleSaved={() => toggleSaved(sheetLead)}
           onClose={() => setSheetId(null)}
           onAction={(k) => onAction(sheetLead, k)}
           onAddNote={() => {

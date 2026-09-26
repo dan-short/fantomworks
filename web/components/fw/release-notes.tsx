@@ -28,6 +28,7 @@ import {
   SearchX,
   Server,
   Smartphone,
+  Bookmark,
   Sparkles,
   Trash2,
   Zap,
@@ -49,6 +50,23 @@ export type Release = {
 const SZ = 15
 
 export const RELEASES: Release[] = [
+  {
+    id: '2026-09-26-saved',
+    date: '2026-09-26',
+    title: 'Save leads, and search headings you can see',
+    items: [
+      {
+        icon: <Bookmark size={SZ} />,
+        title: 'A Saved tab for the leads you’re watching',
+        body: 'Tap the bookmark on any lead to save it. Saved leads collect in the new Saved tab at the far left, grouped by where each one sits in the pipeline right now. Saves belong to your login, so a lead you bookmark at the office is already saved on your phone.',
+      },
+      {
+        icon: <Search size={SZ} />,
+        title: 'Bigger category headings in search',
+        body: 'When a search spans categories, the Pending, Call Log, Active… headings between results are now large, colored and easy to spot while scrolling.',
+      },
+    ],
+  },
   {
     id: '2026-08-16-theme-memory',
     date: '2026-08-16',

@@ -7,6 +7,14 @@ export type SubmissionStatus =
   | 'archived'
   | 'deleted'
 
+export type ConsoleView = SubmissionStatus | 'saved'
+
+export interface Favorite {
+  id: number
+  status: SubmissionStatus
+  saved_at: string
+}
+
 export interface Submission {
   id: number
   legacy_id: number

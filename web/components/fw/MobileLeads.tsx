@@ -14,6 +14,7 @@ import {
   ChevronDown,
   Pencil,
   Printer,
+  Bookmark,
   X,
 } from 'lucide-react'
 import type { Submission, DetailStage, SentEmail } from '@/lib/types'
@@ -23,13 +24,21 @@ import { NoteBody } from './NoteBody'
 import { resolvePhotoUrl } from '@/lib/images'
 import { printSubmission } from '@/lib/print-submission'
 import { LEAD_MENU, SHOP_RATE, lastContact, type LeadActionKey } from './LeadCard'
-import { AgeSpine, Badge, ContactCue, FwButton, ageBucket, fmtDate, relAge } from './primitives'
+import { AgeSpine, Badge, ContactCue, FwButton, SaveToggle, ageBucket, fmtDate, relAge } from './primitives'
 
 function fmtMoney(n: number): string {
   return `$${n.toLocaleString('en-US')}`
 }
 
-export function MobileLeadRow({ lead, onOpen }: { lead: Submission; onOpen: (lead: Submission) => void }) {
+export function MobileLeadRow({
+  lead,
+  saved = false,
+  onOpen,
+}: {
+  lead: Submission
+  saved?: boolean
+  onOpen: (lead: Submission) => void
+}) {
   const bucket = ageBucket(lead.received_date)
   const online = (lead.added_by ?? '').toLowerCase().includes('online')
   const vehicle = [lead.year, lead.make, lead.model].filter(Boolean).join(' ')
@@ -57,20 +66,27 @@ export function MobileLeadRow({ lead, onOpen }: { lead: Submission; onOpen: (lea
       <AgeSpine bucket={bucket} />
       <span style={{ flex: 1, minWidth: 0, padding: '9px 2px 9px 11px', display: 'flex', flexDirection: 'column', gap: 3 }}>
         <span style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
-          <span
-            style={{
-              fontFamily: 'var(--font-display)',
-              fontSize: 15.5,
-              fontWeight: 600,
-              letterSpacing: '.01em',
-              color: 'var(--ink)',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              minWidth: 0,
-            }}
-          >
-            {lead.first_name} {lead.last_name}
+          <span style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0 }}>
+            {saved && (
+              <span role="img" aria-label="Saved" style={{ display: 'flex', flexShrink: 0, color: 'var(--age-aging)' }}>
+                <Bookmark size={13} fill="currentColor" />
+              </span>
+            )}
+            <span
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: 15.5,
+                fontWeight: 600,
+                letterSpacing: '.01em',
+                color: 'var(--ink)',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                minWidth: 0,
+              }}
+            >
+              {lead.first_name} {lead.last_name}
+            </span>
           </span>
           {lead.budget != null && (
             <span className="tnum" style={{ fontFamily: 'var(--font-mono)', fontSize: 12.5, fontWeight: 600, color: 'var(--ink)', whiteSpace: 'nowrap' }}>
@@ -232,6 +248,8 @@ export function MobileLeadSheet({
   lead,
   stages,
   emails,
+  saved,
+  onToggleSaved,
   onClose,
   onAction,
   onAddNote,
@@ -242,6 +260,8 @@ export function MobileLeadSheet({
   lead: Submission
   stages: DetailStage[]
   emails: SentEmail[]
+  saved: boolean
+  onToggleSaved: () => void
   onClose: () => void
   onAction: (k: LeadActionKey) => void
   onAddNote: () => void
@@ -325,25 +345,26 @@ export function MobileLeadSheet({
                 <span style={{ color: 'var(--faint)' }}>#{lead.legacy_id}</span>
               </div>
             </div>
-            <button
-              onClick={onClose}
-              aria-label="Close"
-              style={{
-                width: 40,
-                height: 40,
-                margin: '-4px -8px 0 0',
-                flexShrink: 0,
-                border: 'none',
-                background: 'transparent',
-                color: 'var(--faint)',
-                cursor: 'pointer',
-                display: 'grid',
-                placeItems: 'center',
-                borderRadius: 'var(--radius-sm)',
-              }}
-            >
-              <X size={19} />
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', margin: '-4px -8px 0 0', flexShrink: 0 }}>
+              <SaveToggle saved={saved} onToggle={onToggleSaved} size={40} />
+              <button
+                onClick={onClose}
+                aria-label="Close"
+                style={{
+                  width: 40,
+                  height: 40,
+                  border: 'none',
+                  background: 'transparent',
+                  color: 'var(--faint)',
+                  cursor: 'pointer',
+                  display: 'grid',
+                  placeItems: 'center',
+                  borderRadius: 'var(--radius-sm)',
+                }}
+              >
+                <X size={19} />
+              </button>
+            </div>
           </div>
         </div>
 

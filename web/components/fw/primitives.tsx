@@ -1,5 +1,6 @@
 'use client'
 import * as React from 'react'
+import { Bookmark } from 'lucide-react'
 
 export type AgeBucket = 'fresh' | 'aging' | 'stale' | 'cold'
 
@@ -426,7 +427,7 @@ export function FwDialog({
   )
 }
 
-export type PipelineTab = { key: string; label: string; count: number }
+export type PipelineTab = { key: string; label: string; count: number; icon?: React.ReactNode }
 
 export function PipelineNav({
   tabs,
@@ -471,6 +472,7 @@ export function PipelineNav({
               if (!on) e.currentTarget.style.background = 'transparent'
             }}
           >
+            {t.icon}
             {t.label}
             <span
               className="tnum"
@@ -491,6 +493,39 @@ export function PipelineNav({
         )
       })}
     </nav>
+  )
+}
+
+export function SaveToggle({ saved, onToggle, size = 28 }: { saved: boolean; onToggle: () => void; size?: number }) {
+  return (
+    <button
+      type="button"
+      aria-pressed={saved}
+      aria-label={saved ? 'Remove from Saved' : 'Save lead'}
+      title={saved ? 'Saved — click to remove' : 'Save to your Saved tab'}
+      onClick={(e) => {
+        e.stopPropagation()
+        onToggle()
+      }}
+      style={{
+        width: size,
+        height: size,
+        flexShrink: 0,
+        display: 'grid',
+        placeItems: 'center',
+        padding: 0,
+        border: 'none',
+        borderRadius: 'var(--radius-sm)',
+        background: 'transparent',
+        cursor: 'pointer',
+        color: saved ? 'var(--age-aging)' : 'var(--faint)',
+        transition: 'color .12s ease, background .12s ease',
+      }}
+      onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--paper-sunk)')}
+      onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+    >
+      <Bookmark size={Math.round(size * 0.57)} fill={saved ? 'currentColor' : 'none'} />
+    </button>
   )
 }
 

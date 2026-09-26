@@ -34,6 +34,7 @@ import {
   ContactCue,
   FwButton,
   FwTooltip,
+  SaveToggle,
   ageBucket,
   fmtDate,
   relAge,
@@ -478,10 +479,12 @@ export function LeadCard({
   emails,
   compact = false,
   selected = false,
+  saved = false,
   editMode = false,
   tokens = [],
   onEditSection,
   onToggleSelect,
+  onToggleSaved,
   onAction,
   onAddNote,
   onOpenPhotos,
@@ -492,10 +495,12 @@ export function LeadCard({
   emails: SentEmail[]
   compact?: boolean
   selected?: boolean
+  saved?: boolean
   editMode?: boolean
   tokens?: string[]
   onEditSection?: (lead: Submission, section: EditSection) => void
   onToggleSelect?: (id: number) => void
+  onToggleSaved?: (lead: Submission) => void
   onAction: (lead: Submission, k: LeadActionKey) => void
   onAddNote: (lead: Submission) => void
   onOpenPhotos: (lead: Submission, idx: number) => void
@@ -588,7 +593,8 @@ export function LeadCard({
             <ChevronRight size={16} />
           </span>
         </button>
-        <div style={{ alignSelf: 'center', paddingRight: 8 }}>
+        <div style={{ alignSelf: 'center', display: 'flex', alignItems: 'center', gap: 2, paddingRight: 8 }}>
+          {onToggleSaved && <SaveToggle saved={saved} onToggle={() => onToggleSaved(lead)} />}
           <Kebab onAction={act} onConfirm={confirm} />
         </div>
         <span
@@ -847,7 +853,10 @@ export function LeadCard({
                 <AttemptRow done={lead.email_attempt} label="Email" icon={<Mail size={13} />} onLog={() => act('email')} reopen />
               </div>
             </div>
-            <Kebab onAction={act} onConfirm={confirm} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              {onToggleSaved && <SaveToggle saved={saved} onToggle={() => onToggleSaved(lead)} />}
+              <Kebab onAction={act} onConfirm={confirm} />
+            </div>
           </div>
 
           {emails.length > 0 && (
