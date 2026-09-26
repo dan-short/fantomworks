@@ -666,10 +666,10 @@ export function SelfSubmissionForm() {
                 color: 'var(--ink)',
               }}
             >
-              Before you start
+              Submit Your Project
             </h1>
             <p className="fw-label" style={{ marginBottom: 18 }}>
-              Please read this first
+              Before you start — please read this first
             </p>
             <div
               style={{

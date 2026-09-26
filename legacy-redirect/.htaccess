@@ -1,0 +1,16 @@
+# projects.fantomworks.com — retire the legacy submission form.
+# Place these rules ABOVE any existing WordPress / W3 Total Cache blocks.
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # Legacy customer photos are still referenced by the new app
+  # (web/next.config.ts -> remotePatterns projects.fantomworks.com/uploads/**).
+  RewriteRule ^uploads/ - [L]
+
+  # Crawlers must be able to read robots.txt to discover the 301s below.
+  RewriteRule ^robots\.txt$ - [L]
+
+  # Everything else -> the new form, permanently.
+  RewriteRule ^ https://submit.fantomworks.com/ [R=301,L]
+</IfModule>

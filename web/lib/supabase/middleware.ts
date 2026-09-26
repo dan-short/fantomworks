@@ -10,6 +10,17 @@ function hasAuthCookie(request: NextRequest) {
     .some((c) => c.name.startsWith('sb-') && c.name.includes('auth-token'))
 }
 
+function isPublicPath(path: string) {
+  return (
+    path.startsWith('/login') ||
+    path.startsWith('/auth') ||
+    path.startsWith('/submit') ||
+    path.startsWith('/confirm') ||
+    path === '/manifest.webmanifest' ||
+    path === '/sw.js'
+  )
+}
+
 function isTransientAuthFailure(error: { name?: string; status?: number } | null) {
   if (!error) return false
   if (error.name === 'AuthRetryableFetchError') return true
@@ -34,6 +45,10 @@ export async function updateSession(request: NextRequest) {
 
   if (!isSupabaseConfigured) return withHostRewrite(supabaseResponse)
 
+  if (isPublicPath(rootPath ?? path) && !hasAuthCookie(request)) {
+    return withHostRewrite(supabaseResponse)
+  }
+
   const supabase = createServerClient(supabaseUrl!, supabasePublishableKey!, {
     cookies: {
       getAll() {
@@ -54,14 +69,7 @@ export async function updateSession(request: NextRequest) {
     error,
   } = await supabase.auth.getUser()
 
-  const effectivePath = rootPath ?? path
-  const isPublic =
-    effectivePath.startsWith('/login') ||
-    effectivePath.startsWith('/auth') ||
-    effectivePath.startsWith('/submit') ||
-    effectivePath.startsWith('/confirm') ||
-    effectivePath === '/manifest.webmanifest' ||
-    effectivePath === '/sw.js'
+  const isPublic = isPublicPath(rootPath ?? path)
 
   if (!user && !isPublic) {
     if (hasAuthCookie(request) && isTransientAuthFailure(error)) {

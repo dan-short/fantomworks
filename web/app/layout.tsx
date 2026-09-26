@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Oswald, Inter, JetBrains_Mono } from "next/font/goog
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { PwaRegister } from "@/components/fw/PwaRegister";
 import { THEME_BOOT_SCRIPT } from "@/lib/theme";
+import { SITE_ORIGIN } from "@/lib/seo";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -33,8 +34,10 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_ORIGIN),
   title: "FantomWorks Call Log",
   description: "FantomWorks project submission call log",
+  robots: { index: false, follow: false },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
