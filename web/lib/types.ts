@@ -98,6 +98,8 @@ export const STATUS_VIEWS: {
   { key: 'archived', label: 'Archives', legacyPage: 'archives.php' },
 ]
 
+export const STATUS_LABEL: Record<string, string> = Object.fromEntries(STATUS_VIEWS.map((v) => [v.key, v.label]))
+
 export function isStatus(v: string): v is SubmissionStatus {
   return ['new', 'pending', 'active', 'finished', 'possible', 'archived', 'deleted'].includes(v)
 }

@@ -1,6 +1,7 @@
 'use client'
 import * as React from 'react'
 import { Bookmark } from 'lucide-react'
+import { STATUS_LABEL, type SubmissionStatus } from '@/lib/types'
 
 export type AgeBucket = 'fresh' | 'aging' | 'stale' | 'cold'
 
@@ -125,6 +126,14 @@ export function Badge({
       {icon}
       {children}
     </span>
+  )
+}
+
+export function StatusBadge({ status }: { status: SubmissionStatus }) {
+  return (
+    <Badge tone={`var(--status-${status}, var(--steel))`} variant="solid" style={{ flexShrink: 0 }}>
+      {STATUS_LABEL[status] ?? status}
+    </Badge>
   )
 }
 

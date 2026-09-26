@@ -26,7 +26,7 @@ import { NoteBody } from './NoteBody'
 import { WhatsNew } from './WhatsNew'
 import { PatchNotes } from './PatchNotes'
 import { applyTheme, currentTheme, setThemeAttr, storedTheme } from '@/lib/theme'
-import { STATUS_VIEWS } from '@/lib/types'
+import { STATUS_LABEL, STATUS_VIEWS } from '@/lib/types'
 import { defaultSortDir, type SortKey, type SortDir } from '@/lib/sort'
 import {
   SEARCH_CATEGORIES,
@@ -78,10 +78,6 @@ function sortFieldsFor(view: ConsoleView, searching: boolean): SortField[] {
       : SORT_FIELDS
   return searching ? [RELEVANCE_FIELD, ...base] : base
 }
-
-const CATEGORY_LABEL: Record<string, string> = Object.fromEntries(
-  STATUS_VIEWS.map((v) => [v.key, v.label]),
-)
 
 function buildUrl(opts: {
   view: string
@@ -532,7 +528,7 @@ function FiltersPopover({
                       {on && <Check size={10} strokeWidth={3.5} />}
                     </span>
                     <span style={{ flex: 1, fontSize: 12.5, color: on ? 'var(--ink-2)' : 'var(--faint)' }}>
-                      {CATEGORY_LABEL[c] ?? c}
+                      {STATUS_LABEL[c] ?? c}
                     </span>
                     <span
                       className="tnum"
@@ -555,25 +551,26 @@ function CategoryHeader({
   status,
   shown,
   total,
-  first,
   size,
 }: {
   status: SubmissionStatus
   shown: number
   total: number
-  first: boolean
   size: 'lg' | 'md'
 }) {
   const lg = size === 'lg'
   return (
     <h2
       style={{
+        position: 'sticky',
+        top: 'var(--fw-hdr-h, 0px)',
+        zIndex: 10,
         display: 'flex',
         alignItems: 'center',
         gap: lg ? 12 : 10,
         margin: 0,
-        paddingTop: first ? 2 : lg ? 18 : 14,
-        paddingBottom: 2,
+        padding: lg ? '10px 0 8px' : '8px 0 6px',
+        background: 'var(--bg-app)',
         font: 'inherit',
       }}
     >
@@ -593,7 +590,7 @@ function CategoryHeader({
           whiteSpace: 'nowrap',
         }}
       >
-        {CATEGORY_LABEL[status] ?? status}
+        {STATUS_LABEL[status] ?? status}
       </span>
       <span
         className="tnum"
@@ -767,6 +764,19 @@ export function CallConsole({
     applyTheme(currentTheme() === 'night' ? 'day' : 'night')
   }
 
+  const rootRef = React.useRef<HTMLDivElement>(null)
+  const headerRef = React.useRef<HTMLElement>(null)
+  React.useLayoutEffect(() => {
+    const root = rootRef.current
+    const header = headerRef.current
+    if (!root || !header) return
+    const sync = () => root.style.setProperty('--fw-hdr-h', `${header.offsetHeight}px`)
+    sync()
+    const observer = new ResizeObserver(sync)
+    observer.observe(header)
+    return () => observer.disconnect()
+  }, [])
+
   const [qInput, setQInput] = React.useState(search)
   const [prevView, setPrevView] = React.useState(view)
   if (view !== prevView) {
@@ -916,7 +926,7 @@ export function CallConsole({
   const steelToggleBorder = '1px solid rgba(255,255,255,.2)'
 
   return (
-    <div className="fw" style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
+    <div ref={rootRef} className="fw" style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
       {devMode && (
         <div
           style={{
@@ -932,7 +942,7 @@ export function CallConsole({
         </div>
       )}
 
-      <header style={{ position: 'sticky', top: 0, zIndex: 20, background: 'var(--steel)', boxShadow: 'var(--shadow-md)' }}>
+      <header ref={headerRef} style={{ position: 'sticky', top: 0, zIndex: 20, background: 'var(--steel)', boxShadow: 'var(--shadow-md)' }}>
         <div className="fw-hdr-top" style={{ padding: '12px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <Image
@@ -1290,10 +1300,11 @@ export function CallConsole({
           <>
             <div className="fw-desktop-only" style={{ display: 'flex', flexDirection: 'column', gap: density === 'compact' ? 7 : 12 }}>
               {groups.map((g, i) => (
-                <React.Fragment key={g.status}>
-                  {grouped && (
-                    <CategoryHeader status={g.status} shown={g.rows.length} total={groupTotal(g.status)} first={i === 0} size="lg" />
-                  )}
+                <section
+                  key={g.status}
+                  style={{ display: 'flex', flexDirection: 'column', gap: density === 'compact' ? 7 : 12, marginTop: grouped && i > 0 ? 12 : 0 }}
+                >
+                  {grouped && <CategoryHeader status={g.status} shown={g.rows.length} total={groupTotal(g.status)} size="lg" />}
                   {g.rows.map((l) => (
                     <LeadCard
                       key={l.id}
@@ -1303,6 +1314,7 @@ export function CallConsole({
                       compact={density === 'compact'}
                       selected={sel.has(l.id)}
                       saved={savedIds.has(l.id)}
+                      showStatus={grouped}
                       editMode={editMode}
                       tokens={tokens}
                       onEditSection={(lead, section) => setEditing({ lead, section })}
@@ -1317,20 +1329,24 @@ export function CallConsole({
                       onConfirm={onConfirm}
                     />
                   ))}
-                </React.Fragment>
+                </section>
               ))}
             </div>
             <div className="fw-mobile-only">
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {groups.map((g, i) => (
-                  <React.Fragment key={g.status}>
-                    {grouped && (
-                      <CategoryHeader status={g.status} shown={g.rows.length} total={groupTotal(g.status)} first={i === 0} size="md" />
-                    )}
+                  <section key={g.status} style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: grouped && i > 0 ? 10 : 0 }}>
+                    {grouped && <CategoryHeader status={g.status} shown={g.rows.length} total={groupTotal(g.status)} size="md" />}
                     {g.rows.map((l) => (
-                      <MobileLeadRow key={l.id} lead={l} saved={savedIds.has(l.id)} onOpen={(lead) => setSheetId(lead.id)} />
+                      <MobileLeadRow
+                        key={l.id}
+                        lead={l}
+                        saved={savedIds.has(l.id)}
+                        showStatus={grouped}
+                        onOpen={(lead) => setSheetId(lead.id)}
+                      />
                     ))}
-                  </React.Fragment>
+                  </section>
                 ))}
               </div>
             </div>

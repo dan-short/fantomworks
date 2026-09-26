@@ -35,6 +35,7 @@ import {
   FwButton,
   FwTooltip,
   SaveToggle,
+  StatusBadge,
   ageBucket,
   fmtDate,
   relAge,
@@ -480,6 +481,7 @@ export function LeadCard({
   compact = false,
   selected = false,
   saved = false,
+  showStatus = false,
   editMode = false,
   tokens = [],
   onEditSection,
@@ -496,6 +498,7 @@ export function LeadCard({
   compact?: boolean
   selected?: boolean
   saved?: boolean
+  showStatus?: boolean
   editMode?: boolean
   tokens?: string[]
   onEditSection?: (lead: Submission, section: EditSection) => void
@@ -571,10 +574,22 @@ export function LeadCard({
           }}
         >
           <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-            <span style={{ fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 600, color: 'var(--ink)', whiteSpace: 'nowrap' }}>
+            <span
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: 15,
+                fontWeight: 600,
+                color: 'var(--ink)',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                minWidth: 0,
+              }}
+            >
               <Hl>{fullName}</Hl>
             </span>
             {online ? <Badge tone="sky">Online</Badge> : <Badge tone="amber">{lead.added_by || 'Office'}</Badge>}
+            {showStatus && <StatusBadge status={lead.status} />}
           </span>
           <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: 'var(--ink-2)', minWidth: 0 }}>
             <span style={{ color: 'var(--accent)', display: 'flex' }}>
@@ -643,6 +658,7 @@ export function LeadCard({
                 <Hl>{fullName}</Hl>
               </span>
               {online ? <Badge tone="sky">Online</Badge> : <Badge tone="amber">{lead.added_by || 'Office'}</Badge>}
+              {showStatus && <StatusBadge status={lead.status} />}
             </div>
           </EditZone>
           <EditZone editMode={editMode} label="Vehicle" onClick={() => edit('vehicle')} style={{ marginTop: 3 }}>

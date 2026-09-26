@@ -24,7 +24,7 @@ import { NoteBody } from './NoteBody'
 import { resolvePhotoUrl } from '@/lib/images'
 import { printSubmission } from '@/lib/print-submission'
 import { LEAD_MENU, SHOP_RATE, lastContact, type LeadActionKey } from './LeadCard'
-import { AgeSpine, Badge, ContactCue, FwButton, SaveToggle, ageBucket, fmtDate, relAge } from './primitives'
+import { AgeSpine, Badge, ContactCue, FwButton, SaveToggle, StatusBadge, ageBucket, fmtDate, relAge } from './primitives'
 
 function fmtMoney(n: number): string {
   return `$${n.toLocaleString('en-US')}`
@@ -33,10 +33,12 @@ function fmtMoney(n: number): string {
 export function MobileLeadRow({
   lead,
   saved = false,
+  showStatus = false,
   onOpen,
 }: {
   lead: Submission
   saved?: boolean
+  showStatus?: boolean
   onOpen: (lead: Submission) => void
 }) {
   const bucket = ageBucket(lead.received_date)
@@ -87,6 +89,7 @@ export function MobileLeadRow({
             >
               {lead.first_name} {lead.last_name}
             </span>
+            {showStatus && <StatusBadge status={lead.status} />}
           </span>
           {lead.budget != null && (
             <span className="tnum" style={{ fontFamily: 'var(--font-mono)', fontSize: 12.5, fontWeight: 600, color: 'var(--ink)', whiteSpace: 'nowrap' }}>
