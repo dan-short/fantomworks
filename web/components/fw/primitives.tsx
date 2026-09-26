@@ -436,7 +436,7 @@ export function FwDialog({
   )
 }
 
-export type PipelineTab = { key: string; label: string; count: number; icon?: React.ReactNode }
+export type PipelineTab = { key: string; label: string; count: number }
 
 export function PipelineNav({
   tabs,
@@ -447,8 +447,15 @@ export function PipelineNav({
   active: string
   onChange: (key: string) => void
 }) {
+  const navRef = React.useRef<HTMLElement>(null)
+  React.useEffect(() => {
+    navRef.current
+      ?.querySelector<HTMLElement>('[aria-current="page"]')
+      ?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+  }, [active])
+
   return (
-    <nav style={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+    <nav ref={navRef} style={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
       {tabs.map((t) => {
         const on = t.key === active
         return (
@@ -460,13 +467,13 @@ export function PipelineNav({
             style={{
               display: 'inline-flex',
               alignItems: 'center',
-              gap: 7,
+              gap: 6,
               fontFamily: 'var(--font-display)',
               fontSize: 13,
               fontWeight: 600,
               letterSpacing: '0.05em',
               textTransform: 'uppercase',
-              padding: '7px 13px',
+              padding: '7px 10px',
               borderRadius: 'var(--radius-sm)',
               cursor: 'pointer',
               border: '1px solid transparent',
@@ -481,7 +488,6 @@ export function PipelineNav({
               if (!on) e.currentTarget.style.background = 'transparent'
             }}
           >
-            {t.icon}
             {t.label}
             <span
               className="tnum"

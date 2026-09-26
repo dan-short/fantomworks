@@ -627,7 +627,7 @@ function SearchField({ value, onChange, onClear }: { value: string; onChange: (v
         borderRadius: 'var(--radius-sm)',
         padding: '0 10px',
         height: 34,
-        minWidth: 280,
+        minWidth: 250,
         boxShadow: focus ? '0 0 0 3px var(--focus-ring)' : 'var(--shadow-inset)',
         transition: 'border-color .12s ease, box-shadow .12s ease',
       }}
@@ -830,7 +830,7 @@ export function CallConsole({
   }
 
   const tabs = [
-    { key: 'saved', label: 'Saved', count: savedIds.size, icon: <Bookmark size={13} fill={view === 'saved' ? 'currentColor' : 'none'} /> },
+    { key: 'saved', label: 'Saved', count: savedIds.size },
     ...STATUS_VIEWS.map((v) => ({ key: v.key, label: v.label, count: counts[v.key] ?? 0 })),
   ]
   const viewLabel = view === 'saved' ? 'Saved' : (STATUS_VIEWS.find((v) => v.key === view)?.label ?? view)
@@ -1104,7 +1104,7 @@ export function CallConsole({
           </div>
         </div>
 
-        <div className="fw-toolbar" style={{ padding: '0 22px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+        <div className="fw-toolbar" style={{ padding: '0 22px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
           <div
             className="fw-pipeline"
             style={
@@ -1137,7 +1137,7 @@ export function CallConsole({
               tabs={tabs}
             />
           </div>
-          <div className="fw-controls" style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <div className="fw-controls" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <button
               onClick={() => setEditMode((e) => !e)}
               title="Toggle edit mode — click any part of a lead to edit it"
