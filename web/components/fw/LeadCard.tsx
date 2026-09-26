@@ -1,5 +1,6 @@
 'use client'
 import * as React from 'react'
+import { createPortal } from 'react-dom'
 import Image from 'next/image'
 import {
   Phone,
@@ -271,9 +272,33 @@ function Kebab({
   onConfirm: (item: { k: LeadActionKey; label: string; message: string; danger?: boolean }) => void
 }) {
   const [menu, setMenu] = React.useState(false)
+  const [pos, setPos] = React.useState<{ top: number; right: number } | null>(null)
+  const [portalTarget, setPortalTarget] = React.useState<Element | null>(null)
+  const wrapRef = React.useRef<HTMLDivElement>(null)
   const items = LEAD_MENU
+
+  const closeMenu = () => setMenu(false)
+  const openMenu = () => {
+    const rect = wrapRef.current?.getBoundingClientRect()
+    if (rect) setPos({ top: rect.bottom + 6, right: window.innerWidth - rect.right })
+    // Portal onto the themed `.fw` root (not document.body) so the menu still
+    // inherits the design-token CSS variables that are scoped to that class.
+    setPortalTarget(wrapRef.current?.closest('.fw') ?? document.body)
+    setMenu(true)
+  }
+
+  React.useEffect(() => {
+    if (!menu) return
+    window.addEventListener('scroll', closeMenu, true)
+    window.addEventListener('resize', closeMenu)
+    return () => {
+      window.removeEventListener('scroll', closeMenu, true)
+      window.removeEventListener('resize', closeMenu)
+    }
+  }, [menu])
+
   return (
-    <div style={{ position: 'relative' }}>
+    <div ref={wrapRef} style={{ position: 'relative' }}>
       <FwButton
         variant="ghost"
         size="sm"
@@ -281,24 +306,25 @@ function Kebab({
         aria-label="Row actions"
         onClick={(e) => {
           e.stopPropagation()
-          setMenu((m) => !m)
+          if (menu) closeMenu()
+          else openMenu()
         }}
         style={{ padding: '0 6px' }}
       />
-      {menu && (
+      {menu && pos && portalTarget && createPortal(
         <>
           <div
             onClick={(e) => {
               e.stopPropagation()
-              setMenu(false)
+              closeMenu()
             }}
             style={{ position: 'fixed', inset: 0, zIndex: 30 }}
           />
           <div
             style={{
-              position: 'absolute',
-              right: 0,
-              top: 30,
+              position: 'fixed',
+              top: pos.top,
+              right: pos.right,
               zIndex: 31,
               minWidth: 186,
               background: 'var(--surface-card)',
@@ -320,7 +346,7 @@ function Kebab({
               >
                 <button
                   onClick={() => {
-                    setMenu(false)
+                    closeMenu()
                     if (m.confirm) onConfirm({ k: m.k, label: m.label, message: m.confirm, danger: m.danger })
                     else onAction(m.k)
                   }}
@@ -354,7 +380,8 @@ function Kebab({
               </div>
             ))}
           </div>
-        </>
+        </>,
+        portalTarget
       )}
     </div>
   )
