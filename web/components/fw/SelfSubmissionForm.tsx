@@ -1539,66 +1539,22 @@ export function SelfSubmissionForm() {
           </>
         }
       >
-        {(() => {
-          const nTasks = parseTaskList(f.tasksRaw).length || 1
-          const partsNum = parseNum(f.materialsCost)
-          const hoursNum = parseNum(f.laborHours)
-          const avgParts = partsNum != null ? Math.round(partsNum / nTasks) : null
-          const avgHours = hoursNum != null ? Math.round((hoursNum / nTasks) * 10) / 10 : null
-          return (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {(avgParts != null || avgHours != null) && (
-                <div
-                  style={{
-                    padding: '12px 14px',
-                    background: 'var(--paper-sunk)',
-                    borderLeft: '3px solid var(--accent)',
-                    borderRadius: 'var(--radius-sm)',
-                    fontSize: 13.5,
-                    lineHeight: 1.55,
-                    color: 'var(--ink-2)',
-                  }}
-                >
-                  Across your{' '}
-                  <strong style={{ color: 'var(--ink)' }}>{nTasks}</strong> task
-                  {nTasks === 1 ? '' : 's'}, your estimate is for an average of{' '}
-                  {avgParts != null && (
-                    <>
-                      <strong className="tnum" style={{ color: 'var(--ink)' }}>
-                        ${avgParts.toLocaleString()}
-                      </strong>{' '}
-                      in parts
-                    </>
-                  )}
-                  {avgParts != null && avgHours != null ? ' and ' : ''}
-                  {avgHours != null && (
-                    <>
-                      <strong className="tnum" style={{ color: 'var(--ink)' }}>
-                        {avgHours}
-                      </strong>{' '}
-                      hours of labor
-                    </>
-                  )}{' '}
-                  per task.
-                </div>
-              )}
-              {needTime && (
-                <ConfirmCheck checked={confirmTime} onChange={setConfirmTime}>
-                  Please confirm that you believe this is a reasonable estimate of time necessary for
-                  a person to diagnose, research, order, receive, install, and test all parts.
-                </ConfirmCheck>
-              )}
-              {needBudget && (
-                <ConfirmCheck checked={confirmBudget} onChange={setConfirmBudget}>
-                  I also believe that my materials budget is sufficient to purchase the component
-                  including all necessary accessories, installation kits, fasteners, and misc coating
-                  and paint materials, including the costs of shipping and taxes in today&rsquo;s
-                  prices.
-                </ConfirmCheck>
-              )}
-            </div>
-          )
-        })()}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {needTime && (
+            <ConfirmCheck checked={confirmTime} onChange={setConfirmTime}>
+              Please confirm that you believe this is a reasonable estimate of time necessary for
+              a person to diagnose, research, order, receive, install, and test all parts.
+            </ConfirmCheck>
+          )}
+          {needBudget && (
+            <ConfirmCheck checked={confirmBudget} onChange={setConfirmBudget}>
+              I also believe that my materials budget is sufficient to purchase the component
+              including all necessary accessories, installation kits, fasteners, and misc coating
+              and paint materials, including the costs of shipping and taxes in today&rsquo;s
+              prices.
+            </ConfirmCheck>
+          )}
+        </div>
       </FwDialog>
     </div>
   )
