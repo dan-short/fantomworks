@@ -18,7 +18,7 @@ if (supabaseUrl) {
 }
 
 const nextConfig: NextConfig = {
-  images: { remotePatterns },
+  images: { remotePatterns, unoptimized: true },
 };
 
 export default nextConfig;
