@@ -142,7 +142,7 @@ body {
   --font-display: var(--font-oswald), 'Arial Narrow', sans-serif;
   --font-body: var(--font-inter), system-ui, -apple-system, sans-serif;
   --font-mono:
-    var(--font-jbmono), ui-monospace, 'SFMono-Regular', Menlo, monospace;
+    var(--font-geist-mono), ui-monospace, 'SFMono-Regular', Menlo, monospace;
 
   --paper: #f4f1eb;
   --paper-sunk: #ede9e1;
