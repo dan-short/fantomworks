@@ -4,6 +4,7 @@ export type SubmissionStatus =
   | 'active'
   | 'finished'
   | 'possible'
+  | 'not_yet'
   | 'archived'
   | 'deleted'
 
@@ -95,11 +96,12 @@ export const STATUS_VIEWS: {
   { key: 'active', label: 'Active', legacyPage: 'confirmed.php' },
   { key: 'finished', label: 'Finished', legacyPage: 'finished.php' },
   { key: 'possible', label: 'Possibles', legacyPage: 'office.php' },
+  { key: 'not_yet', label: 'Not Yet', legacyPage: '' },
   { key: 'archived', label: 'Archives', legacyPage: 'archives.php' },
 ]
 
 export const STATUS_LABEL: Record<string, string> = Object.fromEntries(STATUS_VIEWS.map((v) => [v.key, v.label]))
 
 export function isStatus(v: string): v is SubmissionStatus {
-  return ['new', 'pending', 'active', 'finished', 'possible', 'archived', 'deleted'].includes(v)
+  return ['new', 'pending', 'active', 'finished', 'possible', 'not_yet', 'archived', 'deleted'].includes(v)
 }

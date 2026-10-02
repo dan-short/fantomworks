@@ -1602,6 +1602,7 @@ export function CallConsole({
                 ['pending', 'Pending'],
                 ['active', 'Active'],
                 ['possible', 'Possible'],
+                ['not_yet', 'Not Yet'],
                 ['finished', 'Finished'],
               ] as const
             ).map(([k, lbl]) => (

@@ -6,6 +6,7 @@ export const SEARCH_CATEGORIES: SubmissionStatus[] = [
   'active',
   'finished',
   'possible',
+  'not_yet',
   'archived',
 ]
 

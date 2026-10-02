@@ -73,6 +73,7 @@ const MIX: { status: Submission['status']; n: number }[] = [
   { status: 'pending', n: 9 },
   { status: 'active', n: 7 },
   { status: 'possible', n: 6 },
+  { status: 'not_yet', n: 4 },
   { status: 'finished', n: 5 },
   { status: 'archived', n: 8 },
 ]

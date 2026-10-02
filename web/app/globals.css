@@ -175,6 +175,7 @@ body {
   --status-pending: #b45309;
   --status-active: #15803d;
   --status-possible: #7c3aed;
+  --status-not_yet: #be185d;
   --status-finished: #64748b;
   --status-archived: #8b8378;
 
